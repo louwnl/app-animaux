@@ -74,6 +74,15 @@ export default function EditionTache() {
       />
       {!t.animalId && <Champ label="Ou quel lieu ? (facultatif)" value={t.lieu ?? ''} onChangeText={(lieu) => maj({ lieu })} placeholder="Ex. Cage des lapins, écurie" />}
 
+      {donnees.personnes.length > 0 && (
+        <Choix
+          label="Qui s'en occupe ?"
+          options={[['moi', 'Moi'] as [string, string], ...donnees.personnes.map((p) => [p.id, p.nom] as [string, string])]}
+          valeur={t.assigneA ?? 'moi'}
+          onChange={(id) => maj({ assigneA: id === 'moi' ? undefined : id })}
+        />
+      )}
+
       <Choix label="Fréquence" options={TYPES_REC} valeur={t.recurrence.type} onChange={changerRecurrence} />
       {t.recurrence.type === 'hebdo' && (
         <Choix

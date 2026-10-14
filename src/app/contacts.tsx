@@ -1,10 +1,10 @@
 import { Linking, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useStore } from '../../lib/store';
-import type { CategorieContact, Contact } from '../../lib/types';
-import { CATEGORIES_CONTACT } from '../../lib/libelles';
-import { BoutonFlottant, Carte, Ecran, Petit, Titre, Vide, couleurs } from '../../components/ui';
+import { useStore } from '../lib/store';
+import type { CategorieContact, Contact } from '../lib/types';
+import { CATEGORIES_CONTACT } from '../lib/libelles';
+import { BoutonFlottant, Carte, Ecran, Petit, Titre, Vide, couleurs } from '../components/ui';
 
 function Action({ icone, onPress }: { icone: keyof typeof Ionicons.glyphMap; onPress: () => void }) {
   return (

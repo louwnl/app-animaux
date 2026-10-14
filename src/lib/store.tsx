@@ -1,17 +1,32 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Animal, Contact, Donnees, Realisation, RendezVous, Tache } from './types';
+import { MOI, type Animal, type Contact, type Donnees, type Personne, type Realisation, type RendezVous, type Tache } from './types';
 import { demanderPermission, replanifierTout } from './notifications';
 
 const CLE = 'mes-animaux:donnees';
 
-const VIDE: Donnees = { version: 1, animaux: [], taches: [], realisations: [], rdvs: [], contacts: [] };
+const VIDE: Donnees = {
+  version: 2,
+  animaux: [],
+  taches: [],
+  realisations: [],
+  rdvs: [],
+  contacts: [],
+  personnes: [],
+  operations: [],
+  remboursements: [],
+};
+
+/** Complète des données anciennes ou importées avec les collections manquantes. */
+export function normaliser(brut: Partial<Donnees>): Donnees {
+  return { ...VIDE, ...brut, version: 2 };
+}
 
 export function nouvelId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
-type Collection = 'animaux' | 'taches' | 'realisations' | 'rdvs' | 'contacts';
+type Collection = 'animaux' | 'taches' | 'realisations' | 'rdvs' | 'contacts' | 'personnes' | 'operations' | 'remboursements';
 type Element<C extends Collection> = Donnees[C][number];
 
 interface Store {
@@ -35,7 +50,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       try {
         const brut = await AsyncStorage.getItem(CLE);
         if (brut) {
-          const d = { ...VIDE, ...JSON.parse(brut) } as Donnees;
+          const d = normaliser(JSON.parse(brut));
           setDonnees(d);
           demanderPermission().then((ok) => {
             if (ok) replanifierTout(d);
@@ -81,6 +96,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           if (collection === 'animaux') {
             suite.taches = suite.taches.filter((t) => t.animalId !== id);
             suite.rdvs = suite.rdvs.map((r) => ({ ...r, animalIds: r.animalIds.filter((a) => a !== id) }));
+            suite.operations = suite.operations.map((o) => (o.animalId === id ? { ...o, animalId: undefined } : o));
+          }
+          if (collection === 'personnes') {
+            suite.taches = suite.taches.map((t) => (t.assigneA === id ? { ...t, assigneA: undefined } : t));
           }
           return suite;
         }),
@@ -95,11 +114,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             tacheId,
             date: jour,
             faiteLe: new Date().toISOString(),
+            faitePar: d.taches.find((t) => t.id === tacheId)?.assigneA,
             ...details,
           };
           return { ...d, realisations: [...d.realisations.filter((x) => x.id !== r.id), r] };
         }),
-      remplacerTout: (nouvelles) => appliquer(() => ({ ...VIDE, ...nouvelles })),
+      remplacerTout: (nouvelles) => appliquer(() => normaliser(nouvelles)),
     }),
     [pret, donnees, appliquer],
   );
@@ -124,4 +144,13 @@ export function useTache(id?: string): Tache | undefined {
 }
 export function useRdv(id?: string): RendezVous | undefined {
   return useStore().donnees.rdvs.find((r) => r.id === id);
+}
+export function usePersonne(id?: string): Personne | undefined {
+  return useStore().donnees.personnes.find((p) => p.id === id);
+}
+
+/** Nom affiché d'une personne (MOI → « Moi »). */
+export function nomPersonne(id: string | undefined, personnes: Personne[]): string {
+  if (!id || id === MOI) return 'Moi';
+  return personnes.find((p) => p.id === id)?.nom ?? 'Personne supprimée';
 }

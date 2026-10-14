@@ -1,7 +1,7 @@
 import { Platform, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import type { Animal, Contact, Realisation, RendezVous, Tache } from '../lib/types';
+import type { Animal, Contact, Personne, Realisation, RendezVous, Tache } from '../lib/types';
 import { CATEGORIES_TACHE, EMOJI_ESPECE, STATUTS, TYPES_RDV, TYPES_SEANCE } from '../lib/libelles';
 import { age, formatDateHeure, libelleRecurrence } from '../lib/dates';
 import { Carte, Petit, couleurs } from './ui';
@@ -45,16 +45,20 @@ export function LigneTache({
   faite,
   realisation,
   animaux,
+  personnes = [],
   onBasculer,
 }: {
   tache: Tache;
   faite: boolean;
   realisation?: Realisation;
   animaux: Animal[];
+  personnes?: Personne[];
   onBasculer: () => void;
 }) {
   const animal = animaux.find((a) => a.id === tache.animalId);
+  const confiee = personnes.find((p) => p.id === tache.assigneA);
   const sous = [
+    confiee && `👤 ${confiee.nom}`,
     animal ? `${EMOJI_ESPECE[animal.espece]} ${animal.nom}` : tache.lieu,
     tache.heure?.replace(':', 'h'),
     realisation?.seance &&
@@ -83,9 +87,11 @@ export function LigneTache({
   );
 }
 
-export function CarteTache({ tache, animaux }: { tache: Tache; animaux: Animal[] }) {
+export function CarteTache({ tache, animaux, personnes = [] }: { tache: Tache; animaux: Animal[]; personnes?: Personne[] }) {
   const animal = animaux.find((a) => a.id === tache.animalId);
+  const confiee = personnes.find((p) => p.id === tache.assigneA);
   const sous = [
+    confiee && `👤 ${confiee.nom}`,
     libelleRecurrence(tache.recurrence),
     tache.heure?.replace(':', 'h'),
     animal ? `${EMOJI_ESPECE[animal.espece]} ${animal.nom}` : tache.lieu,

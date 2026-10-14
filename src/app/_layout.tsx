@@ -30,6 +30,15 @@ function Contenu() {
       <Stack.Screen name="tache/seance" options={{ title: 'Séance de travail', presentation: 'modal' }} />
       <Stack.Screen name="rdv/edit" options={{ title: 'Rendez-vous', presentation: 'modal' }} />
       <Stack.Screen name="contact/edit" options={{ title: 'Contact', presentation: 'modal' }} />
+      <Stack.Screen name="taches" options={{ title: 'Tâches' }} />
+      <Stack.Screen name="rdv/index" options={{ title: 'Rendez-vous' }} />
+      <Stack.Screen name="contacts" options={{ title: 'Contacts des pros' }} />
+      <Stack.Screen name="personnes" options={{ title: 'Personnes' }} />
+      <Stack.Screen name="personne/edit" options={{ title: 'Personne', presentation: 'modal' }} />
+      <Stack.Screen name="finances/operation" options={{ title: 'Opération', presentation: 'modal' }} />
+      <Stack.Screen name="finances/remboursement" options={{ title: 'Remboursement', presentation: 'modal' }} />
+      <Stack.Screen name="finances/personne" options={{ title: 'Compte' }} />
+      <Stack.Screen name="sauvegarde" options={{ title: 'Sauvegarde' }} />
     </Stack>
   );
 }

@@ -1,11 +1,11 @@
 import { View } from 'react-native';
 import { router } from 'expo-router';
-import { useStore } from '../../lib/store';
-import type { CategorieTache } from '../../lib/types';
-import { CATEGORIES_TACHE } from '../../lib/libelles';
-import { jourISO } from '../../lib/dates';
-import { BoutonFlottant, Ecran, Titre, Vide } from '../../components/ui';
-import { CarteTache } from '../../components/elements';
+import { useStore } from '../lib/store';
+import type { CategorieTache } from '../lib/types';
+import { CATEGORIES_TACHE } from '../lib/libelles';
+import { jourISO } from '../lib/dates';
+import { BoutonFlottant, Ecran, Titre, Vide } from '../components/ui';
+import { CarteTache } from '../components/elements';
 
 export default function Taches() {
   const { donnees } = useStore();
@@ -36,7 +36,7 @@ export default function Taches() {
             <View key={c} style={{ gap: 10 }}>
               <Titre>{CATEGORIES_TACHE[c]}</Titre>
               {liste.map((t) => (
-                <CarteTache key={t.id} tache={t} animaux={donnees.animaux} />
+                <CarteTache key={t.id} tache={t} animaux={donnees.animaux} personnes={donnees.personnes} />
               ))}
             </View>
           );

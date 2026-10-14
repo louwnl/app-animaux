@@ -29,7 +29,8 @@
       [
         "expo-notifications",
         {}
-      ]
+      ],
+      "expo-sharing"
     ],
     "scheme": "mesanimaux"
   }

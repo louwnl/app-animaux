@@ -68,7 +68,8 @@ export async function replanifierTout(d: Donnees): Promise<void> {
 
     const aujourdhui = jourISO();
     for (const t of d.taches) {
-      if (!t.rappel || !t.heure) continue;
+      // Seules les tâches dont je m'occupe me sont rappelées.
+      if (!t.rappel || !t.heure || (t.assigneA && t.assigneA !== 'moi')) continue;
       const [h, m] = t.heure.split(':').map(Number);
       const animal = d.animaux.find((a) => a.id === t.animalId);
       for (let i = 0; i < JOURS_PLANIFIES; i++) {
