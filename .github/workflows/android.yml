@@ -37,8 +37,26 @@ jobs:
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
 
-      - name: Renommage
-        run: cp android/app/build/outputs/apk/release/app-release.apk mes-animaux.apk
+      # L'APK est re-signé avec la clé de l'application, toujours la même,
+      # pour que chaque version s'installe par-dessus la précédente sans perte de données.
+      - name: Signature
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::Clé de signature absente : APK signé avec la clé de test."
+            cp "$APK" mes-animaux.apk
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/mes-animaux.keystore"
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          "$APKSIGNER" sign --ks "$RUNNER_TEMP/mes-animaux.keystore" --ks-key-alias mes-animaux \
+            --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD \
+            --out mes-animaux.apk "$APK"
+          "$APKSIGNER" verify --print-certs mes-animaux.apk | grep -i "SHA-256"
+          rm "$RUNNER_TEMP/mes-animaux.keystore"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -46,11 +64,17 @@ jobs:
           path: mes-animaux.apk
 
       # Sur main, l'APK est publié dans une release pour l'installer depuis le téléphone.
+      # Sur main, publication seulement si l'APK porte la clé de l'application.
       - name: Publication
         if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Ajoute les secrets ANDROID_KEYSTORE_BASE64 et ANDROID_KEYSTORE_PASSWORD avant de publier."
+            exit 1
+          fi
           TAG="build-${{ github.run_number }}"
           gh release create "$TAG" mes-animaux.apk \
             --title "Mes Animaux (version ${{ github.run_number }})" \
