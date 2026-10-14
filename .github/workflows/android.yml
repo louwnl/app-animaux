@@ -1,0 +1,58 @@
+name: APK Android
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - run: npm ci
+
+      - name: Vérification des types
+        run: npx tsc --noEmit
+
+      - name: Génération du projet Android
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Compilation de l'APK
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Renommage
+        run: cp android/app/build/outputs/apk/release/app-release.apk mes-animaux.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mes-animaux-apk
+          path: mes-animaux.apk
+
+      # Sur main, l'APK est publié dans une release pour l'installer depuis le téléphone.
+      - name: Publication
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="build-${{ github.run_number }}"
+          gh release create "$TAG" mes-animaux.apk \
+            --title "Mes Animaux (version ${{ github.run_number }})" \
+            --notes "Télécharge mes-animaux.apk depuis ton téléphone Android pour l'installer." \
+            --latest
