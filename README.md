@@ -36,3 +36,10 @@ notifications locales `expo-notifications` (`src/lib/notifications.ts`).
 ```bash
 npx tsc --noEmit    # vérification des types
 ```
+
+## Installer sur Android
+
+À chaque mise à jour de `main`, GitHub compile l'application et publie le fichier `mes-animaux.apk`
+dans les [Releases](../../releases/latest). Depuis le téléphone, ouvre la dernière release, télécharge
+`mes-animaux.apk` et ouvre-le (Android demande d'autoriser l'installation depuis le navigateur).
+Les mises à jour s'installent par-dessus sans perdre les données.
