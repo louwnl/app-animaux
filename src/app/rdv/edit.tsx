@@ -3,17 +3,19 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { nouvelId, useRdv, useStore } from '../../lib/store';
 import type { Rappel, RendezVous, TypeRdv } from '../../lib/types';
 import { CATEGORIES_CONTACT, EMOJI_ESPECE, RAPPELS, TYPES_RDV } from '../../lib/libelles';
+import { depuisJour } from '../../lib/dates';
 import { Bouton, Champ, ChampDate, Choix, Ecran, Petit, confirmer } from '../../components/ui';
 
-function demainNeufHeures(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
+/** 9 h le jour donné, sinon demain. */
+function neufHeures(jour?: string): string {
+  const d = jour ? depuisJour(jour) : new Date();
+  if (!jour) d.setDate(d.getDate() + 1);
   d.setHours(9, 0, 0, 0);
   return d.toISOString();
 }
 
 export default function EditionRdv() {
-  const params = useLocalSearchParams<{ id?: string; animalId?: string }>();
+  const params = useLocalSearchParams<{ id?: string; animalId?: string; jour?: string }>();
   const existant = useRdv(params.id);
   const { donnees, enregistrer, supprimer } = useStore();
 
@@ -22,7 +24,7 @@ export default function EditionRdv() {
       id: nouvelId(),
       titre: '',
       type: 'veterinaire',
-      dateHeure: demainNeufHeures(),
+      dateHeure: neufHeures(params.jour),
       animalIds: params.animalId ? [params.animalId] : [],
       rappel: 'les_deux',
     },

@@ -17,6 +17,16 @@ La conception complète est dans le document de projet `conception-app-animaux.m
   et compte rendu.
 - **Contacts** : par catégorie, avec boutons appel, SMS, e-mail et itinéraire.
 
+## Ajouté en V2
+
+- **Calendrier** : vue du mois avec pastilles (rdv, tâches, arrivées / départs) et détail du jour choisi.
+- **Finances** : toutes les dépenses et rentrées, par mois ou par année, par catégorie et par animal.
+  Une dépense peut être payée par quelqu'un d'autre et partagée à parts égales (ex. le terrain des chevaux).
+  Les soldes indiquent qui te doit quoi, et les remboursements se notent depuis la fiche de la personne.
+- **Personnes** : l'entourage avec qui tu partages des frais ou à qui tu confies des tâches (sortir un cheval…).
+  Les rappels ne concernent que les tâches dont tu t'occupes.
+- **Sauvegarde** : export de toutes les données dans un fichier (Drive, e-mail…) et import sur un autre téléphone.
+
 Les données restent sur le téléphone (aucun compte, fonctionne sans réseau). Les rappels sont des notifications locales,
 reprogrammées à chaque modification pour les 14 jours à venir.
 

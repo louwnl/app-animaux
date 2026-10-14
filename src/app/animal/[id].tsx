@@ -5,6 +5,8 @@ import { EMOJI_ESPECE, ESPECES, ISSUES, STATUTS, TYPES_ACCUEIL, TYPES_SEANCE } f
 import { age, formatJourCourt } from '../../lib/dates';
 import { Bouton, Carte, Ecran, Petit, Titre, Vide, couleurs } from '../../components/ui';
 import { CarteRdv, CarteTache } from '../../components/elements';
+import { CarteOperation } from '../../components/finances';
+import { bilan, euros } from '../../lib/finances';
 
 function Info({ label, valeur }: { label: string; valeur?: string }) {
   if (!valeur) return null;
@@ -39,6 +41,8 @@ export default function FicheAnimal() {
     .filter((r) => idsTaches.has(r.tacheId) && r.seance)
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 10);
+  const operations = donnees.operations.filter((o) => o.animalId === animal.id).sort((a, b) => b.date.localeCompare(a.date));
+  const annee = String(new Date().getFullYear());
   const accueils = [...animal.accueils].sort((a, b) => b.dateArrivee.localeCompare(a.dateArrivee));
   const sexe = animal.sexe === 'male' ? 'Mâle' : animal.sexe === 'femelle' ? 'Femelle' : undefined;
   const passageOuAncien = animal.statut !== 'mien' || accueils.length > 0;
@@ -127,7 +131,27 @@ export default function FicheAnimal() {
       </Titre>
       {taches.length === 0 && <Vide>Aucune tâche liée à {animal.nom}.</Vide>}
       {taches.map((t) => (
-        <CarteTache key={t.id} tache={t} animaux={donnees.animaux} />
+        <CarteTache key={t.id} tache={t} animaux={donnees.animaux} personnes={donnees.personnes} />
+      ))}
+
+      <Titre
+        action={
+          <Pressable onPress={() => router.push(`/finances/operation?animalId=${animal.id}`)}>
+            <Text style={{ color: couleurs.accent, fontWeight: '600' }}>+ Dépense</Text>
+          </Pressable>
+        }
+      >
+        Dépenses
+      </Titre>
+      {operations.length === 0 ? (
+        <Vide>Aucune dépense pour {animal.nom}.</Vide>
+      ) : (
+        <Petit>
+          Total (ma part) : {euros(bilan(operations).maPart)} · cette année : {euros(bilan(operations.filter((o) => o.date.startsWith(annee))).maPart)}
+        </Petit>
+      )}
+      {operations.slice(0, 5).map((o) => (
+        <CarteOperation key={o.id} o={o} personnes={donnees.personnes} animaux={donnees.animaux} />
       ))}
 
       {seances.length > 0 && (

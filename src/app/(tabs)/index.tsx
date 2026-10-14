@@ -72,6 +72,7 @@ export default function Aujourdhui() {
             faite={faites.has(t.id)}
             realisation={faites.get(t.id)}
             animaux={donnees.animaux}
+            personnes={donnees.personnes}
             onBasculer={() => basculer(t.id, t.categorie)}
           />
         ))}

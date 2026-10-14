@@ -48,6 +48,7 @@ export interface Tache {
   dateFin?: string;
   heure?: string; // HH:MM
   rappel: boolean;
+  assigneA?: string; // id de Personne ; absent = moi
 }
 
 export type TypeSeance = 'longe' | 'monte' | 'liberte' | 'balade' | 'autre';
@@ -59,6 +60,7 @@ export interface Realisation {
   date: string; // jour de l'occurrence
   faiteLe: string; // ISO
   seance?: { type: TypeSeance; dureeMin?: number; ressenti?: string };
+  faitePar?: string; // id de Personne ; absent = moi
   notes?: string;
 }
 
@@ -98,11 +100,60 @@ export interface Contact {
   notes?: string;
 }
 
+/** Identifiant réservé désignant l'utilisatrice / l'utilisateur de l'app. */
+export const MOI = 'moi';
+
+/** Une personne de l'entourage : partage des frais, tâches confiées. */
+export interface Personne {
+  id: string;
+  nom: string;
+  telephone?: string;
+  notes?: string;
+}
+
+export type CategorieOperation =
+  | 'alimentation'
+  | 'litiere'
+  | 'veterinaire'
+  | 'marechal'
+  | 'soins'
+  | 'materiel'
+  | 'pension'
+  | 'terrain'
+  | 'adoption'
+  | 'autre';
+
+export interface Operation {
+  id: string;
+  date: string; // AAAA-MM-JJ
+  libelle: string;
+  montant: number; // en euros, toujours positif
+  sens: 'depense' | 'recette';
+  categorie: CategorieOperation;
+  animalId?: string;
+  payePar: string; // MOI ou id de Personne
+  /** Personnes qui se partagent la dépense à parts égales (MOI inclus le cas échéant). Vide = seul le payeur. */
+  partageAvec: string[];
+  notes?: string;
+}
+
+export interface Remboursement {
+  id: string;
+  date: string;
+  de: string; // MOI ou id de Personne
+  a: string;
+  montant: number;
+  notes?: string;
+}
+
 export interface Donnees {
-  version: 1;
+  version: 1 | 2;
   animaux: Animal[];
   taches: Tache[];
   realisations: Realisation[];
   rdvs: RendezVous[];
   contacts: Contact[];
+  personnes: Personne[];
+  operations: Operation[];
+  remboursements: Remboursement[];
 }
