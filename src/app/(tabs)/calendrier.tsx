@@ -170,6 +170,7 @@ export default function Calendrier() {
           <LigneTache
             key={t.id}
             tache={t}
+            jour={jour}
             faite={faites.has(t.id)}
             realisation={faites.get(t.id)}
             animaux={donnees.animaux}

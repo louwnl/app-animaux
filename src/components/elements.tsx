@@ -2,22 +2,46 @@ import { Platform, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Animal, Contact, Personne, Realisation, RendezVous, Tache } from '../lib/types';
-import { CATEGORIES_TACHE, EMOJI_ESPECE, STATUTS, TYPES_RDV, TYPES_SEANCE } from '../lib/libelles';
+import { EMOJI_ESPECE, STATUTS, TYPES_RDV, nomsAnimaux } from '../lib/libelles';
+import { option } from '../lib/listes';
+import { useStore } from '../lib/store';
+import { proposerRappel } from '../lib/rappel';
 import { age, derniereFois, ecartJours, formatDateHeure, formatJourCourt, ilYA, jourISO, libelleRecurrence } from '../lib/dates';
 import { Carte, Petit, couleurs } from './ui';
 
-export function nomsAnimaux(ids: string[], animaux: Animal[]): string {
-  return ids
-    .map((id) => animaux.find((a) => a.id === id))
-    .filter((a): a is Animal => !!a)
-    .map((a) => `${EMOJI_ESPECE[a.espece]} ${a.nom}`)
-    .join(', ');
+export { nomsAnimaux };
+
+/** « à Marie, Paul » pour un animal à d'autres, « avec Marie » pour un animal partagé avec moi. */
+export function proprietaires(animal: Animal, personnes: Personne[]): string | undefined {
+  const noms = animal.proprietaireIds.map((id) => personnes.find((p) => p.id === id)?.nom).filter(Boolean);
+  if (noms.length === 0 || animal.statut === 'parti') return undefined;
+  return `${animal.statut === 'autre_proprio' ? 'à' : 'avec'} ${noms.join(', ')}`;
+}
+
+/** Les animaux de la tâche, ou son lieu. */
+function cible(tache: Tache, animaux: Animal[]): string | undefined {
+  return nomsAnimaux(tache.animalIds, animaux) || tache.lieu;
+}
+
+/** Petit bouton qui prépare un rappel par SMS ou WhatsApp pour la personne à qui la tâche est confiée. */
+function BoutonRappel({ tache, personne, jour }: { tache: Tache; personne?: Personne; jour?: string }) {
+  const { donnees } = useStore();
+  if (!personne?.telephone) return null;
+  return (
+    <Pressable
+      onPress={() => proposerRappel(personne, tache, donnees.animaux, jour)}
+      hitSlop={8}
+      accessibilityLabel={`Envoyer un rappel à ${personne.nom}`}
+      style={({ pressed }) => [{ padding: 6, borderRadius: 10, backgroundColor: couleurs.accentClair }, pressed && { opacity: 0.7 }]}
+    >
+      <Ionicons name="chatbubble-ellipses-outline" size={20} color={couleurs.accent} />
+    </Pressable>
+  );
 }
 
 export function CarteAnimal({ animal, personnes = [] }: { animal: Animal; personnes?: Personne[] }) {
   const passage = animal.statut === 'famille_relais' || animal.statut === 'refuge' || animal.statut === 'autre_proprio';
-  const proprio = animal.statut === 'autre_proprio' ? personnes.find((p) => p.id === animal.proprietaireId) : undefined;
-  const details = [proprio && `à ${proprio.nom}`, animal.race, age(animal.dateNaissance)].filter(Boolean).join(' · ');
+  const details = [proprietaires(animal, personnes), animal.race, age(animal.dateNaissance)].filter(Boolean).join(' · ');
   return (
     <Carte onPress={() => router.push(`/animal/${animal.id}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       <Text style={{ fontSize: 34 }}>{EMOJI_ESPECE[animal.espece]}</Text>
@@ -47,23 +71,25 @@ export function LigneTache({
   realisation,
   animaux,
   personnes = [],
+  jour,
   onBasculer,
 }: {
   tache: Tache;
+  jour?: string;
   faite: boolean;
   realisation?: Realisation;
   animaux: Animal[];
   personnes?: Personne[];
   onBasculer: () => void;
 }) {
-  const animal = animaux.find((a) => a.id === tache.animalId);
+  const { donnees } = useStore();
   const confiee = personnes.find((p) => p.id === tache.assigneA);
   const sous = [
     confiee && `👤 ${confiee.nom}`,
-    animal ? `${EMOJI_ESPECE[animal.espece]} ${animal.nom}` : tache.lieu,
+    cible(tache, animaux),
     tache.heure?.replace(':', 'h'),
     realisation?.seance &&
-      `${TYPES_SEANCE[realisation.seance.type]}${realisation.seance.dureeMin ? ` ${realisation.seance.dureeMin} min` : ''}`,
+      `${option(donnees.listes.typesSeance, realisation.seance.type).nom}${realisation.seance.dureeMin ? ` ${realisation.seance.dureeMin} min` : ''}`,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -80,22 +106,23 @@ export function LigneTache({
             textDecorationLine: faite ? 'line-through' : 'none',
           }}
         >
-          {CATEGORIES_TACHE[tache.categorie].split(' ')[0]} {tache.titre}
+          {option(donnees.listes.categoriesTache, tache.categorie).emoji} {tache.titre}
         </Text>
         {!!sous && <Petit>{sous}</Petit>}
       </Pressable>
+      {!faite && <BoutonRappel tache={tache} personne={confiee} jour={jour} />}
     </Carte>
   );
 }
 
 export function CarteTache({ tache, animaux, personnes = [] }: { tache: Tache; animaux: Animal[]; personnes?: Personne[] }) {
-  const animal = animaux.find((a) => a.id === tache.animalId);
+  const { donnees } = useStore();
   const confiee = personnes.find((p) => p.id === tache.assigneA);
   const sous = [
     confiee && `👤 ${confiee.nom}`,
     libelleRecurrence(tache.recurrence),
     tache.heure?.replace(':', 'h'),
-    animal ? `${EMOJI_ESPECE[animal.espece]} ${animal.nom}` : tache.lieu,
+    cible(tache, animaux),
     tache.rappel && tache.heure ? '🔔' : undefined,
   ]
     .filter(Boolean)
@@ -103,7 +130,7 @@ export function CarteTache({ tache, animaux, personnes = [] }: { tache: Tache; a
   return (
     <Carte onPress={() => router.push(`/tache/edit?id=${tache.id}`)}>
       <Text style={{ fontSize: 16, color: couleurs.texte }}>
-        {CATEGORIES_TACHE[tache.categorie].split(' ')[0]} {tache.titre}
+        {option(donnees.listes.categoriesTache, tache.categorie).emoji} {tache.titre}
       </Text>
       <Petit>{sous}</Petit>
     </Carte>
@@ -140,20 +167,20 @@ export function CarteSuivi({
   personnes?: Personne[];
   onBasculer: () => void;
 }) {
-  const animal = animaux.find((a) => a.id === tache.animalId);
+  const { donnees } = useStore();
   const confiee = personnes.find((p) => p.id === tache.assigneA);
   const faitCeJour = realisations.some((r) => r.tacheId === tache.id && r.date === jour);
   const derniere = derniereFois(tache.id, realisations);
   const alerte = tache.recurrence.type === 'libre' ? tache.recurrence.alerteApresJours : undefined;
   const enRetard = !!alerte && (!derniere || ecartJours(derniere, jourISO()) >= alerte);
-  const sous = [animal ? `${EMOJI_ESPECE[animal.espece]} ${animal.nom}` : tache.lieu, confiee && `👤 ${confiee.nom}`]
+  const sous = [cible(tache, animaux), confiee && `👤 ${confiee.nom}`]
     .filter(Boolean)
     .join(' · ');
   return (
     <Carte style={[{ flexDirection: 'row', alignItems: 'center', gap: 10 }, enRetard && { borderColor: couleurs.ambre, backgroundColor: '#FFF8EC' }]}>
       <Pressable style={{ flex: 1, gap: 2 }} onPress={() => router.push(`/tache/edit?id=${tache.id}`)}>
         <Text style={{ fontSize: 16, color: couleurs.texte, fontWeight: '600' }}>
-          {CATEGORIES_TACHE[tache.categorie].split(' ')[0]} {tache.titre}
+          {option(donnees.listes.categoriesTache, tache.categorie).emoji} {tache.titre}
         </Text>
         <Text style={{ fontSize: 13, color: enRetard ? couleurs.ambre : couleurs.doux, fontWeight: enRetard ? '600' : '400' }}>
           {derniere ? `Dernière fois ${ilYA(derniere)} (${formatJourCourt(derniere)})` : 'Jamais noté'}
@@ -161,6 +188,7 @@ export function CarteSuivi({
         </Text>
         {!!sous && <Petit>{sous}</Petit>}
       </Pressable>
+      {enRetard && <BoutonRappel tache={tache} personne={confiee} />}
       <Pressable
         onPress={onBasculer}
         style={({ pressed }) => [

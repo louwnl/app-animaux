@@ -3,7 +3,8 @@ import { Switch, Text, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { nouvelId, useStore, useTache } from '../../lib/store';
 import type { CategorieTache, Recurrence, Tache } from '../../lib/types';
-import { CATEGORIES_TACHE, EMOJI_ESPECE, JOURS_COURTS } from '../../lib/libelles';
+import { EMOJI_ESPECE, JOURS_COURTS } from '../../lib/libelles';
+import { choix } from '../../lib/listes';
 import { jourISO } from '../../lib/dates';
 import { Bouton, Champ, ChampDate, Choix, Ecran, Petit, confirmer, couleurs } from '../../components/ui';
 
@@ -17,7 +18,7 @@ const TYPES_REC: Record<TypeRec, string> = {
 };
 
 // Idées pour aller vite, selon la catégorie.
-const SUGGESTIONS: Record<CategorieTache, string[]> = {
+const SUGGESTIONS: Record<CategorieTache, string[] | undefined> = {
   nettoyage: ['Nettoyer la cage', 'Changer la litière', 'Laver les gamelles', 'Curer le box'],
   alimentation: ['Gamelles', 'Eau fraîche', 'Foin', 'Légumes frais'],
   soins: ['Brossage', 'Curer les pieds', 'Couper les griffes', 'Vermifuge'],
@@ -35,7 +36,7 @@ export default function EditionTache() {
       id: nouvelId(),
       titre: '',
       categorie: 'nettoyage',
-      animalId: params.animalId,
+      animalIds: params.animalId ? [params.animalId] : [],
       recurrence: { type: 'quotidienne' },
       dateDebut: params.jour ?? jourISO(),
       rappel: false,
@@ -50,7 +51,8 @@ export default function EditionTache() {
     else maj({ recurrence: { type } });
   };
 
-  const animauxPresents = donnees.animaux.filter((a) => a.statut !== 'parti' || a.id === t.animalId);
+  const animauxPresents = donnees.animaux.filter((a) => a.statut !== 'parti' || t.animalIds.includes(a.id));
+  const suggestions = SUGGESTIONS[t.categorie] ?? [];
 
   const valider = () => {
     if (!t.titre.trim()) return;
@@ -62,19 +64,19 @@ export default function EditionTache() {
   return (
     <Ecran>
       <Stack.Screen options={{ title: existante ? 'Modifier la tâche' : 'Nouvelle tâche' }} />
-      <Choix label="Catégorie" options={CATEGORIES_TACHE} valeur={t.categorie} onChange={(categorie: CategorieTache) => maj({ categorie })} />
+      <Choix label="Catégorie" options={choix(donnees.listes.categoriesTache)} valeur={t.categorie} onChange={(categorie: CategorieTache) => maj({ categorie })} />
       <Champ label="Tâche" value={t.titre} onChangeText={(titre) => maj({ titre })} placeholder="Ex. Laver les gamelles" />
-      {!t.titre && SUGGESTIONS[t.categorie].length > 0 && (
-        <Choix options={SUGGESTIONS[t.categorie].map((s) => [s, s] as [string, string])} valeur={undefined} onChange={(titre) => maj({ titre })} />
+      {!t.titre && suggestions.length > 0 && (
+        <Choix options={suggestions.map((s) => [s, s] as [string, string])} valeur={undefined} onChange={(titre) => maj({ titre })} />
       )}
 
       <Choix
-        label="Pour quel animal ? (facultatif)"
+        label="Pour quels animaux ? (facultatif)"
         options={animauxPresents.map((a) => [a.id, `${EMOJI_ESPECE[a.espece]} ${a.nom}`] as [string, string])}
-        valeur={t.animalId}
-        onChange={(animalId) => maj({ animalId: animalId === t.animalId ? undefined : animalId })}
+        valeur={t.animalIds}
+        onChange={(id) => maj({ animalIds: t.animalIds.includes(id) ? t.animalIds.filter((x) => x !== id) : [...t.animalIds, id] })}
       />
-      {!t.animalId && <Champ label="Ou quel lieu ? (facultatif)" value={t.lieu ?? ''} onChangeText={(lieu) => maj({ lieu })} placeholder="Ex. Cage des lapins, écurie" />}
+      {t.animalIds.length === 0 && <Champ label="Ou quel lieu ? (facultatif)" value={t.lieu ?? ''} onChangeText={(lieu) => maj({ lieu })} placeholder="Ex. Cage des lapins, écurie" />}
 
       {donnees.personnes.length > 0 && (
         <Choix

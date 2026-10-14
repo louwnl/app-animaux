@@ -3,7 +3,8 @@ import { Text } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { nouvelId, useStore } from '../../lib/store';
 import { MOI, type CategorieOperation, type Operation } from '../../lib/types';
-import { CATEGORIES_OPERATION, euros, lireMontant } from '../../lib/finances';
+import { euros, lireMontant } from '../../lib/finances';
+import { choix, option } from '../../lib/listes';
 import { EMOJI_ESPECE } from '../../lib/libelles';
 import { jourISO } from '../../lib/dates';
 import { Bouton, Champ, ChampDate, Choix, Ecran, Petit, alerte, confirmer, couleurs } from '../../components/ui';
@@ -70,7 +71,7 @@ export default function EditionOperation() {
           : `Les parts font ${euros(totalSaisi)} au lieu de ${euros(montant)}.`,
       );
     }
-    const libelle = o.libelle.trim() || CATEGORIES_OPERATION[o.categorie].split(' ').slice(1).join(' ');
+    const libelle = o.libelle.trim() || option(donnees.listes.categoriesOperation, o.categorie).nom;
     const op: Operation = { ...o, libelle, montant, partageAvec: recette ? [] : o.partageAvec };
     if (inegal) {
       // Les centimes d'arrondi des pourcentages vont au payeur (ou au premier participant).
@@ -96,7 +97,7 @@ export default function EditionOperation() {
       <Stack.Screen options={{ title: existante ? "Modifier l'opération" : 'Nouvelle opération' }} />
       <Choix options={{ depense: 'Dépense', recette: 'Rentrée d’argent' }} valeur={o.sens} onChange={(sens) => maj({ sens })} />
       <Champ label="Montant (€)" value={montantTexte} onChangeText={setMontantTexte} keyboardType="decimal-pad" placeholder="Ex. 45,90" autoFocus={!existante} />
-      <Choix label="Catégorie" options={CATEGORIES_OPERATION} valeur={o.categorie} onChange={(categorie: CategorieOperation) => maj({ categorie })} />
+      <Choix label="Catégorie" options={choix(donnees.listes.categoriesOperation)} valeur={o.categorie} onChange={(categorie: CategorieOperation) => maj({ categorie })} />
       <Champ label="Libellé" value={o.libelle} onChangeText={(libelle) => maj({ libelle })} placeholder="Ex. Foin pour l'hiver" />
       <ChampDate label="Date" mode="date" valeur={o.date} onChange={(v) => v && maj({ date: v })} />
       {animaux.length > 0 && (

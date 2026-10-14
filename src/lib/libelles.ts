@@ -1,13 +1,12 @@
 import type {
+  Animal,
   CategorieContact,
-  CategorieTache,
   Espece,
   IssueAccueil,
   Rappel,
   StatutAnimal,
   TypeAccueil,
   TypeRdv,
-  TypeSeance,
 } from './types';
 
 export const ESPECES: Record<Espece, string> = {
@@ -45,22 +44,6 @@ export const ISSUES: Record<IssueAccueil, string> = {
   autre: 'Autre',
 };
 
-export const CATEGORIES_TACHE: Record<CategorieTache, string> = {
-  nettoyage: '🧽 Nettoyage',
-  alimentation: '🥕 Alimentation',
-  soins: '🪮 Soins / brossage',
-  travail: '🏇 Travail',
-  autre: '📌 Autre',
-};
-
-export const TYPES_SEANCE: Record<TypeSeance, string> = {
-  longe: 'Longe',
-  monte: 'Monté',
-  liberte: 'Liberté',
-  balade: 'Balade',
-  autre: 'Autre',
-};
-
 export const TYPES_RDV: Record<TypeRdv, string> = {
   veterinaire: 'Vétérinaire',
   marechal: 'Maréchal-ferrant',
@@ -90,3 +73,12 @@ export const CATEGORIES_CONTACT: Record<CategorieContact, string> = {
 };
 
 export const JOURS_COURTS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+
+/** « 🐎 Tornade, 🐎 Ulysse » */
+export function nomsAnimaux(ids: string[], animaux: Animal[]): string {
+  return ids
+    .map((id) => animaux.find((a) => a.id === id))
+    .filter((a): a is Animal => !!a)
+    .map((a) => `${EMOJI_ESPECE[a.espece]} ${a.nom}`)
+    .join(', ');
+}

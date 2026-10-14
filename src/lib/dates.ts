@@ -57,14 +57,17 @@ export function libelleRecurrence(r: Recurrence): string {
   }
 }
 
-/** La tâche tombe-t-elle ce jour-là ? Les tâches d'un animal parti s'arrêtent. */
+/** Une tâche liée à des animaux s'arrête quand ils sont tous partis. */
+export function tacheActive(t: Tache, animaux: Animal[]): boolean {
+  if (t.animalIds.length === 0) return true;
+  return t.animalIds.some((id) => animaux.find((a) => a.id === id)?.statut !== 'parti');
+}
+
+/** La tâche tombe-t-elle ce jour-là ? Les tâches d'animaux partis s'arrêtent. */
 export function tacheLeJour(t: Tache, jour: string, animaux: Animal[]): boolean {
   if (jour < t.dateDebut) return false;
   if (t.dateFin && jour > t.dateFin) return false;
-  if (t.animalId) {
-    const a = animaux.find((x) => x.id === t.animalId);
-    if (a?.statut === 'parti') return false;
-  }
+  if (!tacheActive(t, animaux)) return false;
   const r = t.recurrence;
   switch (r.type) {
     case 'unique':

@@ -3,7 +3,8 @@ import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useStore } from '../../lib/store';
-import { CATEGORIES_OPERATION, bilan, euros, solde } from '../../lib/finances';
+import { bilan, euros, solde } from '../../lib/finances';
+import { libelle } from '../../lib/listes';
 import { EMOJI_ESPECE } from '../../lib/libelles';
 import { jourISO } from '../../lib/dates';
 import { BoutonFlottant, Carte, Choix, Ecran, Petit, Titre, Vide, couleurs } from '../../components/ui';
@@ -101,7 +102,7 @@ export default function Finances() {
             <Titre>Par catégorie</Titre>
             <Carte>
               {b.parCategorie.map(([c, m]) => (
-                <Barre key={c} label={CATEGORIES_OPERATION[c]} montant={m} max={b.parCategorie[0][1]} />
+                <Barre key={c} label={libelle(donnees.listes.categoriesOperation, c)} montant={m} max={b.parCategorie[0][1]} />
               ))}
             </Carte>
           </>

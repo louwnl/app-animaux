@@ -30,6 +30,7 @@ export default function EditionContact() {
       <Champ label="Adresse" value={c.adresse ?? ''} onChangeText={(adresse) => maj({ adresse })} />
       <Champ label="Notes" value={c.notes ?? ''} onChangeText={(notes) => maj({ notes })} multiline placeholder="Horaires, urgences, tarifs…" />
       <Bouton titre="Enregistrer" onPress={valider} />
+      {existant && <Bouton titre="Partager (QR code)" variante="secondaire" onPress={() => router.push(`/partage?contactId=${existant.id}`)} />}
       {existant && (
         <Bouton
           titre="Supprimer le contact"

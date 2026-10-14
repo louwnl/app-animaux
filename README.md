@@ -30,6 +30,22 @@ La conception complète est dans le document de projet `conception-app-animaux.m
 Les données restent sur le téléphone (aucun compte, fonctionne sans réseau). Les rappels sont des notifications locales,
 reprogrammées à chaque modification pour les 14 jours à venir.
 
+## Ajouté en V3
+
+- **Suivis « au besoin »** (foin, abreuvoir…) : la dernière fois s'affiche dans Aujourd'hui et le calendrier, avec une alerte de retard.
+- **Animaux d'autres propriétaires**, choisis parmi les Personnes.
+- **Partage inégal** d'une dépense, en montants ou en pourcentages.
+- **Icône** : l'emoji lapin.
+
+## Ajouté en V4
+
+- **Stock** (onglet) : foin, grain, croquettes, légumes… dans l'unité de son choix, avec boutons − / + et seuil d'alerte (« À racheter » dans Aujourd'hui).
+- **Choix personnalisables** (Plus › Paramètres) : catégories de tâches, de dépenses et types de séances, avec leur emoji.
+- **Plusieurs animaux** par tâche et **plusieurs propriétaires** par animal (copropriétaires d'un animal à soi).
+- **Carnet de notes** avec recherche, lié à des animaux ou non.
+- **Rappel par SMS ou WhatsApp** pour une tâche confiée à quelqu'un, message déjà écrit.
+- **QR codes** : partager la fiche d'un animal ou d'un pro (lien `mesanimaux://import`, lu par Plus › Scanner), et faire installer l'app.
+
 ## Lancer l'application
 
 ```bash

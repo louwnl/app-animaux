@@ -2,13 +2,16 @@ import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 import type { Animal, Operation, Personne } from '../lib/types';
 import { MOI } from '../lib/types';
-import { CATEGORIES_OPERATION, euros, partDe, participants } from '../lib/finances';
+import { euros, partDe, participants } from '../lib/finances';
+import { libelle } from '../lib/listes';
+import { useStore } from '../lib/store';
 import { formatJourCourt } from '../lib/dates';
 import { nomPersonne } from '../lib/store';
 import { EMOJI_ESPECE } from '../lib/libelles';
 import { Carte, Petit, couleurs } from './ui';
 
 export function CarteOperation({ o, personnes, animaux }: { o: Operation; personnes: Personne[]; animaux: Animal[] }) {
+  const { donnees } = useStore();
   const animal = animaux.find((a) => a.id === o.animalId);
   const p = participants(o);
   const partage = p.length > 1;
@@ -16,7 +19,7 @@ export function CarteOperation({ o, personnes, animaux }: { o: Operation; person
   const recette = o.sens === 'recette';
   const details = [
     formatJourCourt(o.date),
-    CATEGORIES_OPERATION[o.categorie],
+    libelle(donnees.listes.categoriesOperation, o.categorie),
     animal ? `${EMOJI_ESPECE[animal.espece]} ${animal.nom}` : undefined,
   ]
     .filter(Boolean)

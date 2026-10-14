@@ -19,6 +19,7 @@ export default function EditionAnimal() {
       statut: 'mien',
       sexe: 'inconnu',
       accueils: [],
+      proprietaireIds: [],
       creeLe: new Date().toISOString(),
     },
   );
@@ -26,7 +27,8 @@ export default function EditionAnimal() {
 
   const valider = () => {
     if (!a.nom.trim()) return;
-    let animal = { ...a, nom: a.nom.trim() };
+    const avecProprios = a.statut === 'mien' || a.statut === 'autre_proprio';
+    let animal = { ...a, nom: a.nom.trim(), proprietaireIds: avecProprios ? a.proprietaireIds : [] };
     // Un nouvel animal de passage reçoit directement son premier accueil, daté d'aujourd'hui.
     const passage = animal.statut === 'famille_relais' || animal.statut === 'refuge';
     if (!existant && passage) {
@@ -43,16 +45,18 @@ export default function EditionAnimal() {
       <Champ label="Nom" value={a.nom} onChangeText={(nom) => maj({ nom })} placeholder="Ex. Caramel" autoFocus={!existant} />
       <Choix label="Espèce" options={ESPECES} valeur={a.espece} onChange={(espece: Espece) => maj({ espece })} />
       <Choix label="Statut" options={STATUTS} valeur={a.statut} onChange={(statut: StatutAnimal) => maj({ statut })} />
-      {a.statut === 'autre_proprio' &&
+      {(a.statut === 'autre_proprio' || a.statut === 'mien') &&
         (donnees.personnes.length > 0 ? (
           <Choix
-            label="Propriétaire"
+            label={a.statut === 'mien' ? 'Copropriétaires (facultatif)' : 'Propriétaires'}
             options={donnees.personnes.map((p) => [p.id, p.nom] as [string, string])}
-            valeur={a.proprietaireId}
-            onChange={(proprietaireId) => maj({ proprietaireId: proprietaireId === a.proprietaireId ? undefined : proprietaireId })}
+            valeur={a.proprietaireIds}
+            onChange={(id) =>
+              maj({ proprietaireIds: a.proprietaireIds.includes(id) ? a.proprietaireIds.filter((x) => x !== id) : [...a.proprietaireIds, id] })
+            }
           />
         ) : (
-          <Petit>Ajoute d'abord le propriétaire dans Plus › Personnes pour pouvoir le choisir ici.</Petit>
+          a.statut === 'autre_proprio' && <Petit>Ajoute d'abord les propriétaires dans Plus › Personnes pour pouvoir les choisir ici.</Petit>
         ))}
       <Champ label="Race" value={a.race ?? ''} onChangeText={(race) => maj({ race })} />
       <Choix

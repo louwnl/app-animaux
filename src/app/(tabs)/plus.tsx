@@ -26,6 +26,10 @@ export default function Plus() {
       <Entree icone="medkit-outline" titre="Rendez-vous" sous={`${donnees.rdvs.length} rendez-vous`} vers="/rdv" />
       <Entree icone="people-outline" titre="Personnes" sous="Entourage : frais partagés, tâches confiées" vers="/personnes" />
       <Entree icone="call-outline" titre="Contacts des pros" sous={pluriel(donnees.contacts.length, 'contact')} vers="/contacts" />
+      <Entree icone="book-outline" titre="Carnet de notes" sous={pluriel(donnees.notes.length, 'note')} vers="/notes" />
+      <Entree icone="scan-outline" titre="Scanner un QR code" sous="Récupérer la fiche d'un animal ou d'un pro" vers="/scanner" />
+      <Entree icone="qr-code-outline" titre="Partager l'app" sous="QR code pour la faire installer à quelqu'un" vers="/partage" />
+      <Entree icone="options-outline" titre="Paramètres" sous="Catégories, types de séances et leurs emojis" vers="/parametres" />
       <Entree icone="cloud-upload-outline" titre="Sauvegarde" sous="Exporter ou importer toutes tes données" vers="/sauvegarde" />
     </Ecran>
   );

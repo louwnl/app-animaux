@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import type { Donnees } from './types';
 import { ajouterJours, depuisJour, derniereFois, ilYA, jourISO, tacheLeJour } from './dates';
-import { EMOJI_ESPECE } from './libelles';
+import { nomsAnimaux } from './libelles';
 
 // Les notifications locales ne sont pas disponibles sur le web.
 const actif = Platform.OS !== 'web';
@@ -52,11 +52,7 @@ export async function replanifierTout(d: Donnees): Promise<void> {
     for (const rdv of d.rdvs) {
       if (rdv.rappel === 'aucun') continue;
       const debut = new Date(rdv.dateHeure).getTime();
-      const noms = rdv.animalIds
-        .map((id) => d.animaux.find((a) => a.id === id))
-        .filter(Boolean)
-        .map((a) => `${EMOJI_ESPECE[a!.espece]} ${a!.nom}`)
-        .join(', ');
+      const noms = nomsAnimaux(rdv.animalIds, d.animaux);
       const heure = new Date(rdv.dateHeure).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
       if (rdv.rappel === 'heure' || rdv.rappel === 'les_deux') {
         aPlanifier.push({ titre: `Rdv dans 1 h : ${rdv.titre}`, corps: `${heure} ${noms}`.trim(), date: new Date(debut - 3600_000) });
@@ -71,7 +67,7 @@ export async function replanifierTout(d: Donnees): Promise<void> {
       // Seules les tâches dont je m'occupe me sont rappelées.
       if (!t.rappel || !t.heure || (t.assigneA && t.assigneA !== 'moi')) continue;
       const [h, m] = t.heure.split(':').map(Number);
-      const animal = d.animaux.find((a) => a.id === t.animalId);
+      const animaux = nomsAnimaux(t.animalIds, d.animaux);
       if (t.recurrence.type === 'libre') {
         // Une seule alerte : le jour où la tâche passe en retard (ou dès que possible si elle l'est déjà).
         if (!t.recurrence.alerteApresJours) continue;
@@ -95,7 +91,7 @@ export async function replanifierTout(d: Donnees): Promise<void> {
         date.setHours(h, m, 0, 0);
         aPlanifier.push({
           titre: t.titre,
-          corps: animal ? `${EMOJI_ESPECE[animal.espece]} ${animal.nom}` : t.lieu ?? 'Tâche à faire',
+          corps: animaux || t.lieu || 'Tâche à faire',
           date,
         });
       }

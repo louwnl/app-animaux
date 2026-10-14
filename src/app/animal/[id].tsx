@@ -1,10 +1,12 @@
 import { Pressable, Text, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useAnimal, useStore } from '../../lib/store';
-import { EMOJI_ESPECE, ESPECES, ISSUES, STATUTS, TYPES_ACCUEIL, TYPES_SEANCE } from '../../lib/libelles';
+import { EMOJI_ESPECE, ESPECES, ISSUES, STATUTS, TYPES_ACCUEIL } from '../../lib/libelles';
+import { option } from '../../lib/listes';
 import { age, formatJourCourt } from '../../lib/dates';
 import { Bouton, Carte, Ecran, Petit, Titre, Vide, couleurs } from '../../components/ui';
-import { CarteRdv, CarteTache } from '../../components/elements';
+import { CarteRdv, CarteTache, proprietaires } from '../../components/elements';
+import { CarteNote } from '../../components/notes';
 import { CarteOperation } from '../../components/finances';
 import { bilan, euros } from '../../lib/finances';
 
@@ -31,7 +33,8 @@ export default function FicheAnimal() {
     );
   }
 
-  const taches = donnees.taches.filter((t) => t.animalId === animal.id);
+  const taches = donnees.taches.filter((t) => t.animalIds.includes(animal.id));
+  const notes = donnees.notes.filter((n) => n.animalIds.includes(animal.id)).sort((a, b) => a.titre.localeCompare(b.titre, 'fr'));
   const maintenant = new Date().toISOString();
   const rdvs = donnees.rdvs.filter((r) => r.animalIds.includes(animal.id)).sort((a, b) => b.dateHeure.localeCompare(a.dateHeure));
   const rdvsAVenir = rdvs.filter((r) => r.dateHeure >= maintenant).reverse();
@@ -41,7 +44,7 @@ export default function FicheAnimal() {
     .filter((r) => idsTaches.has(r.tacheId) && r.seance)
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 10);
-  const proprio = animal.statut === 'autre_proprio' ? donnees.personnes.find((p) => p.id === animal.proprietaireId) : undefined;
+  const proprio = proprietaires(animal, donnees.personnes);
   const operations = donnees.operations.filter((o) => o.animalId === animal.id).sort((a, b) => b.date.localeCompare(a.date));
   const annee = String(new Date().getFullYear());
   const accueils = [...animal.accueils].sort((a, b) => b.dateArrivee.localeCompare(a.dateArrivee));
@@ -56,7 +59,7 @@ export default function FicheAnimal() {
         <Text style={{ fontSize: 24, fontWeight: '700', color: couleurs.texte }}>{animal.nom}</Text>
         <Petit>
           {STATUTS[animal.statut]}
-          {proprio ? ` · à ${proprio.nom}` : ''}
+          {proprio ? ` · ${proprio}` : ''}
         </Petit>
       </Carte>
 
@@ -72,7 +75,14 @@ export default function FicheAnimal() {
         <Info label="Identification" valeur={animal.identification} />
         {!!animal.notes && <Text style={{ color: couleurs.texte, marginTop: 6 }}>{animal.notes}</Text>}
       </Carte>
-      <Bouton titre="Modifier la fiche" variante="secondaire" onPress={() => router.push(`/animal/edit?id=${animal.id}`)} />
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <View style={{ flex: 1 }}>
+          <Bouton titre="Modifier la fiche" variante="secondaire" onPress={() => router.push(`/animal/edit?id=${animal.id}`)} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Bouton titre="Partager (QR)" variante="secondaire" onPress={() => router.push(`/partage?animalId=${animal.id}`)} />
+        </View>
+      </View>
 
       {passageOuAncien && (
         <>
@@ -158,13 +168,27 @@ export default function FicheAnimal() {
         <CarteOperation key={o.id} o={o} personnes={donnees.personnes} animaux={donnees.animaux} />
       ))}
 
+      <Titre
+        action={
+          <Pressable onPress={() => router.push(`/note/edit?animalId=${animal.id}`)}>
+            <Text style={{ color: couleurs.accent, fontWeight: '600' }}>+ Note</Text>
+          </Pressable>
+        }
+      >
+        Notes
+      </Titre>
+      {notes.length === 0 && <Vide>Aucune note pour {animal.nom} (posologie, conduite à tenir…).</Vide>}
+      {notes.map((n) => (
+        <CarteNote key={n.id} note={n} />
+      ))}
+
       {seances.length > 0 && (
         <>
           <Titre>Dernières séances de travail</Titre>
           {seances.map((s) => (
             <Carte key={s.id}>
               <Text style={{ color: couleurs.texte, fontWeight: '600' }}>
-                {formatJourCourt(s.date)} · {TYPES_SEANCE[s.seance!.type]}
+                {formatJourCourt(s.date)} · {option(donnees.listes.typesSeance, s.seance!.type).nom}
                 {s.seance!.dureeMin ? ` · ${s.seance!.dureeMin} min` : ''}
               </Text>
               {!!s.seance!.ressenti && <Petit>{s.seance!.ressenti}</Petit>}
