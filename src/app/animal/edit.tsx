@@ -4,12 +4,12 @@ import { nouvelId, useAnimal, useStore } from '../../lib/store';
 import type { Animal, Espece, StatutAnimal } from '../../lib/types';
 import { ESPECES, STATUTS } from '../../lib/libelles';
 import { jourISO } from '../../lib/dates';
-import { Bouton, Champ, ChampDate, Choix, Ecran, confirmer } from '../../components/ui';
+import { Bouton, Champ, ChampDate, Choix, Ecran, Petit, confirmer } from '../../components/ui';
 
 export default function EditionAnimal() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const existant = useAnimal(id);
-  const { enregistrer, supprimer } = useStore();
+  const { donnees, enregistrer, supprimer } = useStore();
 
   const [a, setA] = useState<Animal>(
     existant ?? {
@@ -43,6 +43,17 @@ export default function EditionAnimal() {
       <Champ label="Nom" value={a.nom} onChangeText={(nom) => maj({ nom })} placeholder="Ex. Caramel" autoFocus={!existant} />
       <Choix label="Espèce" options={ESPECES} valeur={a.espece} onChange={(espece: Espece) => maj({ espece })} />
       <Choix label="Statut" options={STATUTS} valeur={a.statut} onChange={(statut: StatutAnimal) => maj({ statut })} />
+      {a.statut === 'autre_proprio' &&
+        (donnees.personnes.length > 0 ? (
+          <Choix
+            label="Propriétaire"
+            options={donnees.personnes.map((p) => [p.id, p.nom] as [string, string])}
+            valeur={a.proprietaireId}
+            onChange={(proprietaireId) => maj({ proprietaireId: proprietaireId === a.proprietaireId ? undefined : proprietaireId })}
+          />
+        ) : (
+          <Petit>Ajoute d'abord le propriétaire dans Plus › Personnes pour pouvoir le choisir ici.</Petit>
+        ))}
       <Champ label="Race" value={a.race ?? ''} onChangeText={(race) => maj({ race })} />
       <Choix
         label="Sexe"

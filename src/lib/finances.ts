@@ -19,12 +19,14 @@ export function euros(montant: number): string {
 
 /** Les personnes qui partagent la dépense (le payeur seul si personne n'est indiqué). */
 export function participants(o: Operation): string[] {
+  if (o.parts && Object.keys(o.parts).length > 0) return Object.keys(o.parts);
   return o.partageAvec.length > 0 ? o.partageAvec : [o.payePar];
 }
 
 /** Part d'une personne dans une dépense (0 si elle n'y participe pas). */
 export function partDe(o: Operation, personneId: string): number {
   if (o.sens !== 'depense') return 0;
+  if (o.parts && Object.keys(o.parts).length > 0) return o.parts[personneId] ?? 0;
   const p = participants(o);
   return p.includes(personneId) ? o.montant / p.length : 0;
 }

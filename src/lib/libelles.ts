@@ -28,6 +28,7 @@ export const STATUTS: Record<StatutAnimal, string> = {
   mien: 'Le mien',
   famille_relais: 'Famille relais',
   refuge: 'Au refuge',
+  autre_proprio: "À quelqu'un d'autre",
   parti: 'Parti',
 };
 

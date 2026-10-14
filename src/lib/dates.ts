@@ -1,4 +1,4 @@
-import type { Animal, Recurrence, Tache } from './types';
+import type { Animal, Realisation, Recurrence, Tache } from './types';
 import { JOURS_COURTS } from './libelles';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -20,7 +20,7 @@ export function ajouterJours(jour: string, n: number): string {
   return jourISO(d);
 }
 
-function ecartJours(de: string, a: string): number {
+export function ecartJours(de: string, a: string): number {
   return Math.round((depuisJour(a).getTime() - depuisJour(de).getTime()) / 86400000);
 }
 
@@ -52,6 +52,8 @@ export function libelleRecurrence(r: Recurrence): string {
       return r.jours.length === 7 ? 'Tous les jours' : [...r.jours].sort().map((j) => JOURS_COURTS[j]).join(', ');
     case 'intervalle':
       return `Tous les ${r.tousLes} jours`;
+    case 'libre':
+      return r.alerteApresJours ? `Au besoin · alerte après ${r.alerteApresJours} j` : 'Au besoin';
   }
 }
 
@@ -73,6 +75,8 @@ export function tacheLeJour(t: Tache, jour: string, animaux: Animal[]): boolean 
       return r.jours.includes(depuisJour(jour).getDay());
     case 'intervalle':
       return ecartJours(t.dateDebut, jour) % Math.max(1, r.tousLes) === 0;
+    case 'libre':
+      return false; // pas de date prévue, voir derniereFois
   }
 }
 
@@ -85,4 +89,18 @@ export function age(dateNaissance?: string): string | undefined {
   if (mois < 0) return undefined;
   if (mois < 24) return `${mois} mois`;
   return `${Math.floor(mois / 12)} ans`;
+}
+
+/** Jour de la dernière réalisation d'une tâche, s'il y en a une. */
+export function derniereFois(tacheId: string, realisations: Realisation[]): string | undefined {
+  let max: string | undefined;
+  for (const r of realisations) if (r.tacheId === tacheId && (!max || r.date > max)) max = r.date;
+  return max;
+}
+
+export function ilYA(jour: string): string {
+  const n = ecartJours(jour, jourISO());
+  if (n <= 0) return "aujourd'hui";
+  if (n === 1) return 'hier';
+  return `il y a ${n} jours`;
 }

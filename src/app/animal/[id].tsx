@@ -41,6 +41,7 @@ export default function FicheAnimal() {
     .filter((r) => idsTaches.has(r.tacheId) && r.seance)
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 10);
+  const proprio = animal.statut === 'autre_proprio' ? donnees.personnes.find((p) => p.id === animal.proprietaireId) : undefined;
   const operations = donnees.operations.filter((o) => o.animalId === animal.id).sort((a, b) => b.date.localeCompare(a.date));
   const annee = String(new Date().getFullYear());
   const accueils = [...animal.accueils].sort((a, b) => b.dateArrivee.localeCompare(a.dateArrivee));
@@ -53,7 +54,10 @@ export default function FicheAnimal() {
       <Carte style={{ alignItems: 'center', gap: 6 }}>
         <Text style={{ fontSize: 56 }}>{EMOJI_ESPECE[animal.espece]}</Text>
         <Text style={{ fontSize: 24, fontWeight: '700', color: couleurs.texte }}>{animal.nom}</Text>
-        <Petit>{STATUTS[animal.statut]}</Petit>
+        <Petit>
+          {STATUTS[animal.statut]}
+          {proprio ? ` · à ${proprio.nom}` : ''}
+        </Petit>
       </Carte>
 
       <Carte>

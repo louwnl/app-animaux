@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Animal, Contact, Personne, Realisation, RendezVous, Tache } from '../lib/types';
 import { CATEGORIES_TACHE, EMOJI_ESPECE, STATUTS, TYPES_RDV, TYPES_SEANCE } from '../lib/libelles';
-import { age, formatDateHeure, libelleRecurrence } from '../lib/dates';
+import { age, derniereFois, ecartJours, formatDateHeure, formatJourCourt, ilYA, jourISO, libelleRecurrence } from '../lib/dates';
 import { Carte, Petit, couleurs } from './ui';
 
 export function nomsAnimaux(ids: string[], animaux: Animal[]): string {
@@ -14,9 +14,10 @@ export function nomsAnimaux(ids: string[], animaux: Animal[]): string {
     .join(', ');
 }
 
-export function CarteAnimal({ animal }: { animal: Animal }) {
-  const passage = animal.statut === 'famille_relais' || animal.statut === 'refuge';
-  const details = [animal.race, age(animal.dateNaissance)].filter(Boolean).join(' · ');
+export function CarteAnimal({ animal, personnes = [] }: { animal: Animal; personnes?: Personne[] }) {
+  const passage = animal.statut === 'famille_relais' || animal.statut === 'refuge' || animal.statut === 'autre_proprio';
+  const proprio = animal.statut === 'autre_proprio' ? personnes.find((p) => p.id === animal.proprietaireId) : undefined;
+  const details = [proprio && `à ${proprio.nom}`, animal.race, age(animal.dateNaissance)].filter(Boolean).join(' · ');
   return (
     <Carte onPress={() => router.push(`/animal/${animal.id}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       <Text style={{ fontSize: 34 }}>{EMOJI_ESPECE[animal.espece]}</Text>
@@ -119,6 +120,61 @@ export function CarteRdv({ rdv, animaux, contacts }: { rdv: RendezVous; animaux:
       <Petit>{[TYPES_RDV[rdv.type], contact?.nom, rdv.lieu].filter(Boolean).join(' · ')}</Petit>
       {!!noms && <Petit>{noms}</Petit>}
       {rdv.rappel !== 'aucun' && Platform.OS !== 'web' && <Petit>🔔 Rappel programmé</Petit>}
+    </Carte>
+  );
+}
+
+/** Tâche « au besoin » : dernière fois, alerte de retard, bouton pour noter que c'est fait. */
+export function CarteSuivi({
+  tache,
+  jour,
+  realisations,
+  animaux,
+  personnes = [],
+  onBasculer,
+}: {
+  tache: Tache;
+  jour: string;
+  realisations: Realisation[];
+  animaux: Animal[];
+  personnes?: Personne[];
+  onBasculer: () => void;
+}) {
+  const animal = animaux.find((a) => a.id === tache.animalId);
+  const confiee = personnes.find((p) => p.id === tache.assigneA);
+  const faitCeJour = realisations.some((r) => r.tacheId === tache.id && r.date === jour);
+  const derniere = derniereFois(tache.id, realisations);
+  const alerte = tache.recurrence.type === 'libre' ? tache.recurrence.alerteApresJours : undefined;
+  const enRetard = !!alerte && (!derniere || ecartJours(derniere, jourISO()) >= alerte);
+  const sous = [animal ? `${EMOJI_ESPECE[animal.espece]} ${animal.nom}` : tache.lieu, confiee && `👤 ${confiee.nom}`]
+    .filter(Boolean)
+    .join(' · ');
+  return (
+    <Carte style={[{ flexDirection: 'row', alignItems: 'center', gap: 10 }, enRetard && { borderColor: couleurs.ambre, backgroundColor: '#FFF8EC' }]}>
+      <Pressable style={{ flex: 1, gap: 2 }} onPress={() => router.push(`/tache/edit?id=${tache.id}`)}>
+        <Text style={{ fontSize: 16, color: couleurs.texte, fontWeight: '600' }}>
+          {CATEGORIES_TACHE[tache.categorie].split(' ')[0]} {tache.titre}
+        </Text>
+        <Text style={{ fontSize: 13, color: enRetard ? couleurs.ambre : couleurs.doux, fontWeight: enRetard ? '600' : '400' }}>
+          {derniere ? `Dernière fois ${ilYA(derniere)} (${formatJourCourt(derniere)})` : 'Jamais noté'}
+          {enRetard ? ' · à refaire' : ''}
+        </Text>
+        {!!sous && <Petit>{sous}</Petit>}
+      </Pressable>
+      <Pressable
+        onPress={onBasculer}
+        style={({ pressed }) => [
+          {
+            paddingHorizontal: 12,
+            paddingVertical: 9,
+            borderRadius: 10,
+            backgroundColor: faitCeJour ? couleurs.accent : couleurs.accentClair,
+          },
+          pressed && { opacity: 0.7 },
+        ]}
+      >
+        <Text style={{ color: faitCeJour ? '#fff' : couleurs.accent, fontWeight: '600' }}>{faitCeJour ? '✓ Fait' : 'Fait'}</Text>
+      </Pressable>
     </Carte>
   );
 }

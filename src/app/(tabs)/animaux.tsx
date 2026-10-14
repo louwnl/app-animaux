@@ -7,11 +7,12 @@ import { ESPECES } from '../../lib/libelles';
 import { BoutonFlottant, Choix, Ecran, Vide } from '../../components/ui';
 import { CarteAnimal } from '../../components/elements';
 
-type Filtre = 'presents' | 'mien' | 'passage' | 'partis';
+type Filtre = 'presents' | 'mien' | 'passage' | 'autres' | 'partis';
 const FILTRES: Record<Filtre, string> = {
   presents: 'Présents',
   mien: 'Mes animaux',
   passage: 'De passage',
+  autres: "À d'autres",
   partis: 'Partis',
 };
 
@@ -25,6 +26,7 @@ export default function Animaux() {
       if (filtre === 'presents') return a.statut !== 'parti';
       if (filtre === 'mien') return a.statut === 'mien';
       if (filtre === 'passage') return a.statut === 'famille_relais' || a.statut === 'refuge';
+      if (filtre === 'autres') return a.statut === 'autre_proprio';
       return a.statut === 'parti';
     })
     .filter((a) => !espece || a.espece === espece)
@@ -39,7 +41,7 @@ export default function Animaux() {
           <Vide>{donnees.animaux.length === 0 ? 'Ajoute ton premier animal avec le bouton +.' : 'Aucun animal dans cette liste.'}</Vide>
         )}
         {liste.map((a) => (
-          <CarteAnimal key={a.id} animal={a} />
+          <CarteAnimal key={a.id} animal={a} personnes={donnees.personnes} />
         ))}
       </Ecran>
       <BoutonFlottant onPress={() => router.push('/animal/edit')} />

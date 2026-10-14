@@ -289,6 +289,15 @@ export function confirmer(message: string, action: () => void) {
   ]);
 }
 
+export function alerte(message: string) {
+  if (Platform.OS === 'web') {
+    // eslint-disable-next-line no-alert
+    window.alert(message);
+    return;
+  }
+  Alert.alert('Attention', message);
+}
+
 export const styles = StyleSheet.create({
   ecran: { flex: 1, backgroundColor: couleurs.fond },
   ecranContenu: { padding: 16, paddingBottom: 100, gap: 10 },

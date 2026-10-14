@@ -26,7 +26,7 @@ export function CarteOperation({ o, personnes, animaux }: { o: Operation; person
       ? undefined
       : `Reçu par ${nomPersonne(o.payePar, personnes)}`
     : partage
-      ? `Payé par ${nomPersonne(o.payePar, personnes)} · partagé entre ${p.map((x) => nomPersonne(x, personnes)).join(', ')}`
+      ? `Payé par ${nomPersonne(o.payePar, personnes)} · partagé entre ${p.map((x) => (o.parts ? `${nomPersonne(x, personnes)} ${euros(o.parts[x] ?? 0)}` : nomPersonne(x, personnes))).join(', ')}`
       : o.payePar !== MOI
         ? `Payé par ${nomPersonne(o.payePar, personnes)}`
         : undefined;
