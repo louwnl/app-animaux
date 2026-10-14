@@ -1,0 +1,130 @@
+import { useState } from 'react';
+import { Switch, Text, View } from 'react-native';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { nouvelId, useStore, useTache } from '../../lib/store';
+import type { CategorieTache, Recurrence, Tache } from '../../lib/types';
+import { CATEGORIES_TACHE, EMOJI_ESPECE, JOURS_COURTS } from '../../lib/libelles';
+import { jourISO } from '../../lib/dates';
+import { Bouton, Champ, ChampDate, Choix, Ecran, Petit, confirmer, couleurs } from '../../components/ui';
+
+type TypeRec = Recurrence['type'];
+const TYPES_REC: Record<TypeRec, string> = {
+  unique: 'Une fois',
+  quotidienne: 'Tous les jours',
+  hebdo: 'Certains jours',
+  intervalle: 'Tous les N jours',
+};
+
+// Idées pour aller vite, selon la catégorie.
+const SUGGESTIONS: Record<CategorieTache, string[]> = {
+  nettoyage: ['Nettoyer la cage', 'Changer la litière', 'Laver les gamelles', 'Curer le box'],
+  alimentation: ['Gamelles', 'Eau fraîche', 'Foin', 'Légumes frais'],
+  soins: ['Brossage', 'Curer les pieds', 'Couper les griffes', 'Vermifuge'],
+  travail: ['Travail à la longe', 'Séance montée', 'Balade', 'Travail en liberté'],
+  autre: [],
+};
+
+export default function EditionTache() {
+  const params = useLocalSearchParams<{ id?: string; animalId?: string; jour?: string }>();
+  const existante = useTache(params.id);
+  const { donnees, enregistrer, supprimer } = useStore();
+
+  const [t, setT] = useState<Tache>(
+    existante ?? {
+      id: nouvelId(),
+      titre: '',
+      categorie: 'nettoyage',
+      animalId: params.animalId,
+      recurrence: { type: 'quotidienne' },
+      dateDebut: params.jour ?? jourISO(),
+      rappel: false,
+    },
+  );
+  const maj = (champs: Partial<Tache>) => setT((x) => ({ ...x, ...champs }));
+
+  const changerRecurrence = (type: TypeRec) => {
+    if (type === 'hebdo') maj({ recurrence: { type, jours: [new Date().getDay()] } });
+    else if (type === 'intervalle') maj({ recurrence: { type, tousLes: 2 } });
+    else maj({ recurrence: { type } });
+  };
+
+  const animauxPresents = donnees.animaux.filter((a) => a.statut !== 'parti' || a.id === t.animalId);
+
+  const valider = () => {
+    if (!t.titre.trim()) return;
+    if (t.recurrence.type === 'hebdo' && t.recurrence.jours.length === 0) return;
+    enregistrer('taches', { ...t, titre: t.titre.trim(), rappel: t.rappel && !!t.heure });
+    router.back();
+  };
+
+  return (
+    <Ecran>
+      <Stack.Screen options={{ title: existante ? 'Modifier la tâche' : 'Nouvelle tâche' }} />
+      <Choix label="Catégorie" options={CATEGORIES_TACHE} valeur={t.categorie} onChange={(categorie: CategorieTache) => maj({ categorie })} />
+      <Champ label="Tâche" value={t.titre} onChangeText={(titre) => maj({ titre })} placeholder="Ex. Laver les gamelles" />
+      {!t.titre && SUGGESTIONS[t.categorie].length > 0 && (
+        <Choix options={SUGGESTIONS[t.categorie].map((s) => [s, s] as [string, string])} valeur={undefined} onChange={(titre) => maj({ titre })} />
+      )}
+
+      <Choix
+        label="Pour quel animal ? (facultatif)"
+        options={animauxPresents.map((a) => [a.id, `${EMOJI_ESPECE[a.espece]} ${a.nom}`] as [string, string])}
+        valeur={t.animalId}
+        onChange={(animalId) => maj({ animalId: animalId === t.animalId ? undefined : animalId })}
+      />
+      {!t.animalId && <Champ label="Ou quel lieu ? (facultatif)" value={t.lieu ?? ''} onChangeText={(lieu) => maj({ lieu })} placeholder="Ex. Cage des lapins, écurie" />}
+
+      <Choix label="Fréquence" options={TYPES_REC} valeur={t.recurrence.type} onChange={changerRecurrence} />
+      {t.recurrence.type === 'hebdo' && (
+        <Choix
+          options={[1, 2, 3, 4, 5, 6, 0].map((j) => [String(j), JOURS_COURTS[j]] as [string, string])}
+          valeur={t.recurrence.jours.map(String)}
+          onChange={(v) => {
+            const j = Number(v);
+            const jours = (t.recurrence as { jours: number[] }).jours;
+            maj({ recurrence: { type: 'hebdo', jours: jours.includes(j) ? jours.filter((x) => x !== j) : [...jours, j] } });
+          }}
+        />
+      )}
+      {t.recurrence.type === 'intervalle' && (
+        <Champ
+          label="Tous les combien de jours ?"
+          keyboardType="number-pad"
+          value={String(t.recurrence.tousLes)}
+          onChangeText={(v) => maj({ recurrence: { type: 'intervalle', tousLes: Math.max(1, parseInt(v, 10) || 1) } })}
+        />
+      )}
+      <ChampDate
+        label={t.recurrence.type === 'unique' ? 'Date' : 'À partir du'}
+        mode="date"
+        valeur={t.dateDebut}
+        onChange={(v) => v && maj({ dateDebut: v })}
+      />
+      {t.recurrence.type !== 'unique' && (
+        <ChampDate label="Jusqu'au (facultatif)" mode="date" optionnel valeur={t.dateFin} onChange={(dateFin) => maj({ dateFin })} />
+      )}
+      <ChampDate label="Heure (facultatif)" mode="heure" optionnel valeur={t.heure} onChange={(heure) => maj({ heure })} />
+      {!!t.heure && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}>
+          <Text style={{ color: couleurs.texte, fontSize: 16 }}>🔔 Me le rappeler à l'heure</Text>
+          <Switch value={t.rappel} onValueChange={(rappel) => maj({ rappel })} trackColor={{ true: couleurs.accent }} />
+        </View>
+      )}
+      {t.categorie === 'travail' && <Petit>En cochant cette tâche, tu pourras noter le type de séance, sa durée et ton ressenti.</Petit>}
+
+      <Bouton titre="Enregistrer" onPress={valider} />
+      {existante && (
+        <Bouton
+          titre="Supprimer la tâche"
+          variante="danger"
+          onPress={() =>
+            confirmer('Supprimer cette tâche et son historique ?', () => {
+              supprimer('taches', existante.id);
+              router.back();
+            })
+          }
+        />
+      )}
+    </Ecran>
+  );
+}
