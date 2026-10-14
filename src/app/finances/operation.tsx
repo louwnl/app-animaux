@@ -6,7 +6,17 @@ import { MOI, type CategorieOperation, type Operation } from '../../lib/types';
 import { CATEGORIES_OPERATION, euros, lireMontant } from '../../lib/finances';
 import { EMOJI_ESPECE } from '../../lib/libelles';
 import { jourISO } from '../../lib/dates';
-import { Bouton, Champ, ChampDate, Choix, Ecran, Petit, confirmer, couleurs } from '../../components/ui';
+import { Bouton, Champ, ChampDate, Choix, Ecran, Petit, alerte, confirmer, couleurs } from '../../components/ui';
+
+type ModePartage = 'egal' | 'montants' | 'pourcentages';
+const MODES: Record<ModePartage, string> = { egal: 'Parts égales', montants: 'Montants', pourcentages: 'Pourcentages' };
+
+/** Comme lireMontant, mais accepte 0 et une saisie vide (0). */
+function lireNombre(texte: string): number {
+  const n = parseFloat(texte.replace(/\s/g, '').replace(',', '.'));
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : 0;
+}
+const nombre = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
 
 export default function EditionOperation() {
   const params = useLocalSearchParams<{ id?: string; animalId?: string }>();
@@ -27,6 +37,11 @@ export default function EditionOperation() {
     },
   );
   const [montantTexte, setMontantTexte] = useState(existante ? String(existante.montant).replace('.', ',') : '');
+  const [mode, setMode] = useState<ModePartage>(existante?.parts ? 'montants' : 'egal');
+  // Saisie brute par personne (montants en € ou pourcentages selon le mode).
+  const [saisies, setSaisies] = useState<Record<string, string>>(() =>
+    Object.fromEntries(Object.entries(existante?.parts ?? {}).map(([id, v]) => [id, String(v).replace('.', ',')])),
+  );
   const maj = (champs: Partial<Operation>) => setO((x) => ({ ...x, ...champs }));
 
   const gens: [string, string][] = [[MOI, 'Moi'], ...donnees.personnes.map((p) => [p.id, p.nom] as [string, string])];
@@ -34,11 +49,39 @@ export default function EditionOperation() {
   const montant = lireMontant(montantTexte);
   const recette = o.sens === 'recette';
   const partage = !recette && o.partageAvec.length > 1;
+  const inegal = partage && mode !== 'egal';
+
+  // Parts en euros calculées depuis la saisie.
+  const valeurs = o.partageAvec.map((id) => lireNombre(saisies[id] ?? ''));
+  const totalSaisi = valeurs.reduce((a, b) => a + b, 0);
+  const cible = mode === 'pourcentages' ? 100 : (montant ?? 0);
+  const ecart = Math.round((cible - totalSaisi) * 100) / 100;
+  const parts: Record<string, number> = {};
+  o.partageAvec.forEach((id, i) => {
+    parts[id] = mode === 'pourcentages' ? Math.round(((montant ?? 0) * valeurs[i]) / 100 * 100) / 100 : valeurs[i];
+  });
 
   const valider = () => {
     if (!montant) return;
+    if (inegal && ecart !== 0) {
+      return alerte(
+        mode === 'pourcentages'
+          ? `Les pourcentages font ${nombre(totalSaisi)} % au lieu de 100 %.`
+          : `Les parts font ${euros(totalSaisi)} au lieu de ${euros(montant)}.`,
+      );
+    }
     const libelle = o.libelle.trim() || CATEGORIES_OPERATION[o.categorie].split(' ').slice(1).join(' ');
-    enregistrer('operations', { ...o, libelle, montant, partageAvec: recette ? [] : o.partageAvec });
+    const op: Operation = { ...o, libelle, montant, partageAvec: recette ? [] : o.partageAvec };
+    if (inegal) {
+      // Les centimes d'arrondi des pourcentages vont au payeur (ou au premier participant).
+      const reste = Math.round((montant - Object.values(parts).reduce((a, b) => a + b, 0)) * 100) / 100;
+      if (reste !== 0) {
+        const qui = o.partageAvec.includes(o.payePar) ? o.payePar : o.partageAvec[0];
+        parts[qui] = Math.round((parts[qui] + reste) * 100) / 100;
+      }
+      op.parts = parts;
+    } else delete op.parts;
+    enregistrer('operations', op);
     router.back();
   };
 
@@ -69,13 +112,35 @@ export default function EditionOperation() {
 
       {!recette && donnees.personnes.length > 0 && (
         <>
-          <Choix label="Partagé entre (à parts égales)" options={gens} valeur={o.partageAvec} onChange={basculerPartage} />
-          {partage && montant ? (
+          <Choix label="Partagé entre" options={gens} valeur={o.partageAvec} onChange={basculerPartage} />
+          {partage && <Choix label="Répartition" options={MODES} valeur={mode} onChange={setMode} />}
+          {inegal &&
+            o.partageAvec.map((id) => (
+              <Champ
+                key={id}
+                label={`${gens.find((g) => g[0] === id)?.[1] ?? '?'} (${mode === 'pourcentages' ? '%' : '€'})`}
+                value={saisies[id] ?? ''}
+                onChangeText={(t) => setSaisies((x) => ({ ...x, [id]: t }))}
+                keyboardType="decimal-pad"
+                placeholder={mode === 'pourcentages' ? 'Ex. 50' : 'Ex. 20'}
+              />
+            ))}
+          {inegal && montant ? (
+            <Text style={{ color: ecart === 0 ? couleurs.texte : couleurs.danger }}>
+              {ecart === 0
+                ? mode === 'pourcentages'
+                  ? o.partageAvec.map((id) => `${gens.find((g) => g[0] === id)?.[1]} ${euros(parts[id])}`).join(' · ')
+                  : 'Le compte est bon.'
+                : mode === 'pourcentages'
+                  ? `Total ${nombre(totalSaisi)} % · ${ecart > 0 ? `il manque ${nombre(ecart)} %` : `${nombre(-ecart)} % en trop`}`
+                  : `Total ${euros(totalSaisi)} · ${ecart > 0 ? `il manque ${euros(ecart)}` : `${euros(-ecart)} en trop`}`}
+            </Text>
+          ) : partage && montant ? (
             <Text style={{ color: couleurs.texte }}>
               {o.partageAvec.length} personnes · {euros(montant / o.partageAvec.length)} chacune
             </Text>
           ) : (
-            <Petit>Laisse vide si la dépense n'est pas partagée.</Petit>
+            !partage && <Petit>Laisse vide si la dépense n'est pas partagée.</Petit>
           )}
         </>
       )}

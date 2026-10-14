@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import type { Donnees } from './types';
-import { ajouterJours, depuisJour, jourISO, tacheLeJour } from './dates';
+import { ajouterJours, depuisJour, derniereFois, ilYA, jourISO, tacheLeJour } from './dates';
 import { EMOJI_ESPECE } from './libelles';
 
 // Les notifications locales ne sont pas disponibles sur le web.
@@ -72,6 +72,22 @@ export async function replanifierTout(d: Donnees): Promise<void> {
       if (!t.rappel || !t.heure || (t.assigneA && t.assigneA !== 'moi')) continue;
       const [h, m] = t.heure.split(':').map(Number);
       const animal = d.animaux.find((a) => a.id === t.animalId);
+      if (t.recurrence.type === 'libre') {
+        // Une seule alerte : le jour où la tâche passe en retard (ou dès que possible si elle l'est déjà).
+        if (!t.recurrence.alerteApresJours) continue;
+        const derniere = derniereFois(t.id, d.realisations);
+        let jour = derniere ? ajouterJours(derniere, t.recurrence.alerteApresJours) : aujourdhui;
+        if (jour < aujourdhui) jour = aujourdhui;
+        const date = depuisJour(jour);
+        date.setHours(h, m, 0, 0);
+        if (date.getTime() <= maintenant) date.setDate(date.getDate() + 1);
+        aPlanifier.push({
+          titre: `À faire : ${t.titre}`,
+          corps: derniere ? `Dernière fois ${ilYA(derniere)}` : 'Pas encore noté',
+          date,
+        });
+        continue;
+      }
       for (let i = 0; i < JOURS_PLANIFIES; i++) {
         const jour = ajouterJours(aujourdhui, i);
         if (!tacheLeJour(t, jour, d.animaux)) continue;

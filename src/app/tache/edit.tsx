@@ -13,6 +13,7 @@ const TYPES_REC: Record<TypeRec, string> = {
   quotidienne: 'Tous les jours',
   hebdo: 'Certains jours',
   intervalle: 'Tous les N jours',
+  libre: 'Au besoin (je note quand c’est fait)',
 };
 
 // Idées pour aller vite, selon la catégorie.
@@ -45,6 +46,7 @@ export default function EditionTache() {
   const changerRecurrence = (type: TypeRec) => {
     if (type === 'hebdo') maj({ recurrence: { type, jours: [new Date().getDay()] } });
     else if (type === 'intervalle') maj({ recurrence: { type, tousLes: 2 } });
+    else if (type === 'libre') maj({ recurrence: { type } });
     else maj({ recurrence: { type } });
   };
 
@@ -103,19 +105,43 @@ export default function EditionTache() {
           onChangeText={(v) => maj({ recurrence: { type: 'intervalle', tousLes: Math.max(1, parseInt(v, 10) || 1) } })}
         />
       )}
-      <ChampDate
-        label={t.recurrence.type === 'unique' ? 'Date' : 'À partir du'}
-        mode="date"
-        valeur={t.dateDebut}
-        onChange={(v) => v && maj({ dateDebut: v })}
-      />
-      {t.recurrence.type !== 'unique' && (
+      {t.recurrence.type === 'libre' && (
+        <>
+          <Petit>
+            Pour ce qu'on fait quand il faut (mettre le foin, nettoyer l'abreuvoir…) : tu notes chaque fois que c'est fait, l'app
+            affiche la dernière fois et le note dans le calendrier.
+          </Petit>
+          <Champ
+            label="M'alerter si pas fait depuis (jours, facultatif)"
+            keyboardType="number-pad"
+            value={t.recurrence.alerteApresJours ? String(t.recurrence.alerteApresJours) : ''}
+            onChangeText={(v) => {
+              const n = parseInt(v, 10);
+              maj({ recurrence: { type: 'libre', alerteApresJours: n > 0 ? n : undefined } });
+            }}
+            placeholder="Ex. 3"
+          />
+        </>
+      )}
+      {t.recurrence.type !== 'libre' && (
+        <ChampDate
+          label={t.recurrence.type === 'unique' ? 'Date' : 'À partir du'}
+          mode="date"
+          valeur={t.dateDebut}
+          onChange={(v) => v && maj({ dateDebut: v })}
+        />
+      )}
+      {t.recurrence.type !== 'unique' && t.recurrence.type !== 'libre' && (
         <ChampDate label="Jusqu'au (facultatif)" mode="date" optionnel valeur={t.dateFin} onChange={(dateFin) => maj({ dateFin })} />
       )}
-      <ChampDate label="Heure (facultatif)" mode="heure" optionnel valeur={t.heure} onChange={(heure) => maj({ heure })} />
+      {(t.recurrence.type !== 'libre' || !!t.recurrence.alerteApresJours) && (
+        <ChampDate label="Heure (facultatif)" mode="heure" optionnel valeur={t.heure} onChange={(heure) => maj({ heure })} />
+      )}
       {!!t.heure && (
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}>
-          <Text style={{ color: couleurs.texte, fontSize: 16 }}>🔔 Me le rappeler à l'heure</Text>
+          <Text style={{ color: couleurs.texte, fontSize: 16, flex: 1 }}>
+            {t.recurrence.type === 'libre' ? "🔔 Me prévenir à cette heure quand c'est en retard" : "🔔 Me le rappeler à l'heure"}
+          </Text>
           <Switch value={t.rappel} onValueChange={(rappel) => maj({ rappel })} trackColor={{ true: couleurs.accent }} />
         </View>
       )}

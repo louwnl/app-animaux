@@ -5,7 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useStore } from '../../lib/store';
 import { ajouterJours, formatJour, jourISO, tacheLeJour } from '../../lib/dates';
 import { BoutonFlottant, Ecran, Petit, Titre, Vide, couleurs } from '../../components/ui';
-import { CarteRdv, LigneTache } from '../../components/elements';
+import { CarteRdv, CarteSuivi, LigneTache } from '../../components/elements';
 
 export default function Aujourdhui() {
   const { donnees, basculerRealisation } = useStore();
@@ -15,6 +15,9 @@ export default function Aujourdhui() {
   const taches = donnees.taches
     .filter((t) => tacheLeJour(t, jour, donnees.animaux))
     .sort((a, b) => (a.heure ?? '99').localeCompare(b.heure ?? '99'));
+  const suivis = donnees.taches.filter(
+    (t) => t.recurrence.type === 'libre' && donnees.animaux.find((a) => a.id === t.animalId)?.statut !== 'parti',
+  );
   const faites = new Map(donnees.realisations.filter((r) => r.date === jour).map((r) => [r.tacheId, r]));
   const restantes = taches.filter((t) => !faites.has(t.id)).length;
 
@@ -59,6 +62,19 @@ export default function Aujourdhui() {
         {rdvsDuJour.length > 0 && <Titre>Rendez-vous</Titre>}
         {rdvsDuJour.map((r) => (
           <CarteRdv key={r.id} rdv={r} animaux={donnees.animaux} contacts={donnees.contacts} />
+        ))}
+
+        {suivis.length > 0 && <Titre>Suivis</Titre>}
+        {suivis.map((t) => (
+          <CarteSuivi
+            key={t.id}
+            tache={t}
+            jour={jour}
+            realisations={donnees.realisations}
+            animaux={donnees.animaux}
+            personnes={donnees.personnes}
+            onBasculer={() => basculerRealisation(t.id, jour)}
+          />
         ))}
 
         <Titre>

@@ -1,5 +1,5 @@
 export type Espece = 'lapin' | 'chat' | 'cheval' | 'autre';
-export type StatutAnimal = 'mien' | 'famille_relais' | 'refuge' | 'parti';
+export type StatutAnimal = 'mien' | 'famille_relais' | 'refuge' | 'autre_proprio' | 'parti';
 export type TypeAccueil = 'famille_relais' | 'refuge';
 export type IssueAccueil = 'adopte' | 'retour_refuge' | 'transfert' | 'decede' | 'autre';
 
@@ -24,6 +24,7 @@ export interface Animal {
   robe?: string;
   identification?: string;
   statut: StatutAnimal;
+  proprietaireId?: string; // Personne, pour un animal qui appartient à quelqu'un d'autre
   notes?: string;
   accueils: Accueil[];
   creeLe: string;
@@ -35,7 +36,8 @@ export type Recurrence =
   | { type: 'unique' }
   | { type: 'quotidienne' }
   | { type: 'hebdo'; jours: number[] } // 0 = dimanche … 6 = samedi
-  | { type: 'intervalle'; tousLes: number }; // tous les N jours depuis dateDebut
+  | { type: 'intervalle'; tousLes: number } // tous les N jours depuis dateDebut
+  | { type: 'libre'; alerteApresJours?: number }; // au besoin : on note quand c'est fait
 
 export interface Tache {
   id: string;
@@ -134,6 +136,8 @@ export interface Operation {
   payePar: string; // MOI ou id de Personne
   /** Personnes qui se partagent la dépense à parts égales (MOI inclus le cas échéant). Vide = seul le payeur. */
   partageAvec: string[];
+  /** Partage inégal : montant de chaque personne. Prioritaire sur le partage à parts égales. */
+  parts?: Record<string, number>;
   notes?: string;
 }
 

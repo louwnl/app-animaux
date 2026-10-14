@@ -6,7 +6,7 @@ import { euros, solde } from '../../lib/finances';
 import { formatJourCourt } from '../../lib/dates';
 import { Bouton, Carte, Ecran, Petit, Titre, Vide, couleurs } from '../../components/ui';
 import { CarteOperation } from '../../components/finances';
-import { CarteTache } from '../../components/elements';
+import { CarteAnimal, CarteTache } from '../../components/elements';
 
 /** Fiche d'une personne : ce qu'on se doit, l'historique commun, les tâches confiées. */
 export default function ComptePersonne() {
@@ -23,6 +23,7 @@ export default function ComptePersonne() {
     .filter((r) => r.de === personne.id || r.a === personne.id)
     .sort((a, b) => b.date.localeCompare(a.date));
   const taches = donnees.taches.filter((t) => t.assigneA === personne.id);
+  const animaux = donnees.animaux.filter((a) => a.statut === 'autre_proprio' && a.proprietaireId === personne.id);
 
   return (
     <Ecran>
@@ -44,6 +45,11 @@ export default function ComptePersonne() {
           </View>
         )}
       </View>
+
+      {animaux.length > 0 && <Titre>Ses animaux</Titre>}
+      {animaux.map((a) => (
+        <CarteAnimal key={a.id} animal={a} personnes={donnees.personnes} />
+      ))}
 
       {taches.length > 0 && <Titre>Tâches confiées</Titre>}
       {taches.map((t) => (

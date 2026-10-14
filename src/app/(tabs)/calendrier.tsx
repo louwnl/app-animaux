@@ -6,7 +6,7 @@ import { useStore } from '../../lib/store';
 import { ajouterJours, depuisJour, formatJour, jourISO, tacheLeJour } from '../../lib/dates';
 import { EMOJI_ESPECE, ISSUES, JOURS_COURTS, TYPES_ACCUEIL } from '../../lib/libelles';
 import { BoutonFlottant, Carte, Ecran, Petit, Titre, Vide, couleurs } from '../../components/ui';
-import { CarteRdv, LigneTache } from '../../components/elements';
+import { CarteRdv, CarteSuivi, LigneTache } from '../../components/elements';
 
 // Semaine commençant le lundi.
 const ORDRE_JOURS = [1, 2, 3, 4, 5, 6, 0];
@@ -37,13 +37,16 @@ export default function Calendrier() {
 
   // Pastilles du mois : rendez-vous, tâches, arrivées / départs.
   const marques = useMemo(() => {
-    const m = new Map<string, { rdv: boolean; taches: number; accueil: boolean }>();
+    const m = new Map<string, { rdv: boolean; taches: number; accueil: boolean; suivi: boolean }>();
+    const libres = new Set(donnees.taches.filter((t) => t.recurrence.type === 'libre').map((t) => t.id));
+    const joursSuivis = new Set(donnees.realisations.filter((r) => libres.has(r.tacheId)).map((r) => r.date));
     for (const j of cases) {
       if (!j) continue;
       m.set(j, {
         rdv: donnees.rdvs.some((r) => jourISO(new Date(r.dateHeure)) === j),
         taches: donnees.taches.filter((t) => tacheLeJour(t, j, donnees.animaux)).length,
         accueil: donnees.animaux.some((a) => a.accueils.some((ac) => ac.dateArrivee === j || ac.dateDepart === j)),
+        suivi: joursSuivis.has(j),
       });
     }
     return m;
@@ -54,6 +57,8 @@ export default function Calendrier() {
     .filter((t) => tacheLeJour(t, jour, donnees.animaux))
     .sort((a, b) => (a.heure ?? '99').localeCompare(b.heure ?? '99'));
   const faites = new Map(donnees.realisations.filter((r) => r.date === jour).map((r) => [r.tacheId, r]));
+  const suivis = donnees.taches.filter((t) => t.recurrence.type === 'libre');
+  const suivisFaits = suivis.filter((t) => faites.has(t.id));
   const mouvements = donnees.animaux.flatMap((a) =>
     a.accueils
       .filter((ac) => ac.dateArrivee === jour || ac.dateDepart === jour)
@@ -119,16 +124,18 @@ export default function Calendrier() {
                       {m?.rdv && <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: couleurs.danger }} />}
                       {!!m?.taches && <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: couleurs.accent }} />}
                       {m?.accueil && <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: couleurs.ambre }} />}
+                      {m?.suivi && <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#3B6FB6' }} />}
                     </View>
                   </Pressable>
                 );
               })}
             </View>
           ))}
-          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 14, paddingTop: 6 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 12, paddingTop: 6 }}>
             <Petit>🔴 Rdv</Petit>
             <Petit>🟢 Tâches</Petit>
             <Petit>🟠 Arrivée / départ</Petit>
+            <Petit>🔵 Suivi fait</Petit>
           </View>
         </Carte>
 
@@ -175,7 +182,21 @@ export default function Calendrier() {
           />
         ))}
 
-        {rdvs.length === 0 && taches.length === 0 && mouvements.length === 0 && <Vide>Rien de prévu ce jour-là.</Vide>}
+        {suivis.length > 0 && <Titre>Suivis</Titre>}
+        {suivis.length > 0 && suivisFaits.length === 0 && <Petit>Rien de noté ce jour-là. Touche « Fait » pour l'ajouter à cette date.</Petit>}
+        {[...suivisFaits, ...suivis.filter((t) => !faites.has(t.id))].map((t) => (
+          <CarteSuivi
+            key={t.id}
+            tache={t}
+            jour={jour}
+            realisations={donnees.realisations}
+            animaux={donnees.animaux}
+            personnes={donnees.personnes}
+            onBasculer={() => basculerRealisation(t.id, jour)}
+          />
+        ))}
+
+        {rdvs.length === 0 && taches.length === 0 && mouvements.length === 0 && suivis.length === 0 && <Vide>Rien de prévu ce jour-là.</Vide>}
       </Ecran>
       <BoutonFlottant onPress={() => router.push(`/rdv/edit?jour=${jour}`)} />
     </View>
