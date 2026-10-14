@@ -1,9 +1,8 @@
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import { useStore } from '../lib/store';
-import type { CategorieTache } from '../lib/types';
-import { CATEGORIES_TACHE } from '../lib/libelles';
-import { jourISO } from '../lib/dates';
+import { libelle } from '../lib/listes';
+import { jourISO, tacheActive } from '../lib/dates';
 import { BoutonFlottant, Ecran, Titre, Vide } from '../components/ui';
 import { CarteTache } from '../components/elements';
 
@@ -14,11 +13,11 @@ export default function Taches() {
   const actives = donnees.taches.filter((t) => {
     if (t.dateFin && t.dateFin < aujourdhui) return false;
     if (t.recurrence.type === 'unique' && t.dateDebut < aujourdhui) return false;
-    const animal = donnees.animaux.find((a) => a.id === t.animalId);
-    return animal?.statut !== 'parti';
+    return tacheActive(t, donnees.animaux);
   });
 
-  const categories = Object.keys(CATEGORIES_TACHE) as CategorieTache[];
+  // Ordre des paramètres, puis les catégories qui n'y sont plus (données importées).
+  const categories = [...new Set([...donnees.listes.categoriesTache.map((c) => c.id), ...actives.map((t) => t.categorie)])];
 
   return (
     <View style={{ flex: 1 }}>
@@ -34,7 +33,7 @@ export default function Taches() {
           if (liste.length === 0) return null;
           return (
             <View key={c} style={{ gap: 10 }}>
-              <Titre>{CATEGORIES_TACHE[c]}</Titre>
+              <Titre>{libelle(donnees.listes.categoriesTache, c)}</Titre>
               {liste.map((t) => (
                 <CarteTache key={t.id} tache={t} animaux={donnees.animaux} personnes={donnees.personnes} />
               ))}

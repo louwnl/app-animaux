@@ -3,8 +3,9 @@ import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useStore } from '../../lib/store';
-import { ajouterJours, formatJour, jourISO, tacheLeJour } from '../../lib/dates';
-import { BoutonFlottant, Ecran, Petit, Titre, Vide, couleurs } from '../../components/ui';
+import { ajouterJours, formatJour, jourISO, tacheActive, tacheLeJour } from '../../lib/dates';
+import { aRacheter, quantiteTexte } from '../../lib/stock';
+import { BoutonFlottant, Carte, Ecran, Petit, Titre, Vide, couleurs } from '../../components/ui';
 import { CarteRdv, CarteSuivi, LigneTache } from '../../components/elements';
 
 export default function Aujourdhui() {
@@ -15,9 +16,7 @@ export default function Aujourdhui() {
   const taches = donnees.taches
     .filter((t) => tacheLeJour(t, jour, donnees.animaux))
     .sort((a, b) => (a.heure ?? '99').localeCompare(b.heure ?? '99'));
-  const suivis = donnees.taches.filter(
-    (t) => t.recurrence.type === 'libre' && donnees.animaux.find((a) => a.id === t.animalId)?.statut !== 'parti',
-  );
+  const suivis = donnees.taches.filter((t) => t.recurrence.type === 'libre' && tacheActive(t, donnees.animaux));
   const faites = new Map(donnees.realisations.filter((r) => r.date === jour).map((r) => [r.tacheId, r]));
   const restantes = taches.filter((t) => !faites.has(t.id)).length;
 
@@ -31,6 +30,8 @@ export default function Aujourdhui() {
       return j > jour && j < limite;
     })
     .sort((a, b) => a.dateHeure.localeCompare(b.dateHeure));
+
+  const aAcheter = donnees.produits.filter(aRacheter);
 
   const basculer = (tacheId: string, categorie: string) => {
     // Pour le travail des chevaux, on note la séance en cochant.
@@ -64,6 +65,19 @@ export default function Aujourdhui() {
           <CarteRdv key={r.id} rdv={r} animaux={donnees.animaux} contacts={donnees.contacts} />
         ))}
 
+        {estAujourdhui && aAcheter.length > 0 && (
+          <>
+            <Titre>À racheter</Titre>
+            <Carte onPress={() => router.push('/stock')} style={{ gap: 4, borderColor: couleurs.ambre, backgroundColor: '#FFF8EC' }}>
+              {aAcheter.map((p) => (
+                <Text key={p.id} style={{ color: couleurs.texte, fontSize: 15 }}>
+                  {p.emoji} {p.nom} <Text style={{ color: couleurs.ambre, fontWeight: '600' }}>· reste {quantiteTexte(p.quantite, p.unite)}</Text>
+                </Text>
+              ))}
+            </Carte>
+          </>
+        )}
+
         {suivis.length > 0 && <Titre>Suivis</Titre>}
         {suivis.map((t) => (
           <CarteSuivi
@@ -85,6 +99,7 @@ export default function Aujourdhui() {
           <LigneTache
             key={t.id}
             tache={t}
+            jour={jour}
             faite={faites.has(t.id)}
             realisation={faites.get(t.id)}
             animaux={donnees.animaux}

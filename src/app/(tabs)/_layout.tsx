@@ -24,6 +24,7 @@ export default function OngletsLayout() {
       <Tabs.Screen name="index" options={{ title: "Aujourd'hui", tabBarIcon: icone('sunny-outline') }} />
       <Tabs.Screen name="calendrier" options={{ title: 'Calendrier', tabBarIcon: icone('calendar-outline') }} />
       <Tabs.Screen name="animaux" options={{ title: 'Animaux', tabBarIcon: icone('paw-outline') }} />
+      <Tabs.Screen name="stock" options={{ title: 'Stock', tabBarIcon: icone('cube-outline') }} />
       <Tabs.Screen name="finances" options={{ title: 'Finances', tabBarIcon: icone('wallet-outline') }} />
       <Tabs.Screen name="plus" options={{ title: 'Plus', tabBarIcon: icone('menu-outline') }} />
     </Tabs>

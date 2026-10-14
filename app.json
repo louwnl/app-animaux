@@ -30,7 +30,14 @@
         "expo-notifications",
         {}
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "La caméra sert à scanner les QR codes de fiches partagées.",
+          "recordAudioAndroid": false
+        }
+      ]
     ],
     "scheme": "mesanimaux"
   }

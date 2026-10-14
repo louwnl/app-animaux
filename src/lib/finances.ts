@@ -1,18 +1,5 @@
 import { MOI, type CategorieOperation, type Donnees, type Operation } from './types';
 
-export const CATEGORIES_OPERATION: Record<CategorieOperation, string> = {
-  alimentation: '🥕 Alimentation',
-  litiere: '🧺 Litière / paille',
-  veterinaire: '🩺 Vétérinaire',
-  marechal: '🧲 Maréchal',
-  soins: '💊 Soins / médicaments',
-  materiel: '🧰 Matériel',
-  pension: '🏠 Pension',
-  terrain: '🌾 Terrain',
-  adoption: '🐾 Adoption / refuge',
-  autre: '📌 Autre',
-};
-
 export function euros(montant: number): string {
   return montant.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
 }

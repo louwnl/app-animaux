@@ -1,12 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { MOI, type Animal, type Contact, type Donnees, type Personne, type Realisation, type RendezVous, type Tache } from './types';
+import { MOI, type Animal, type Contact, type Donnees, type Listes, type Personne, type Realisation, type RendezVous, type Tache } from './types';
+import { LISTES_DEFAUT } from './listes';
 import { demanderPermission, replanifierTout } from './notifications';
 
 const CLE = 'mes-animaux:donnees';
 
 const VIDE: Donnees = {
-  version: 2,
+  version: 3,
   animaux: [],
   taches: [],
   realisations: [],
@@ -15,18 +16,45 @@ const VIDE: Donnees = {
   personnes: [],
   operations: [],
   remboursements: [],
+  notes: [],
+  produits: [],
+  listes: LISTES_DEFAUT,
 };
 
-/** Complète des données anciennes ou importées avec les collections manquantes. */
+/** Champs des versions précédentes, repris à la lecture. */
+type Ancien = { animalId?: string; proprietaireId?: string };
+
+/** Complète des données anciennes ou importées avec les collections manquantes et les migre au format actuel. */
 export function normaliser(brut: Partial<Donnees>): Donnees {
-  return { ...VIDE, ...brut, version: 2 };
+  const d: Donnees = { ...VIDE, ...brut, version: 3 };
+  d.listes = { ...LISTES_DEFAUT, ...brut.listes };
+  // V4 : une tâche peut concerner plusieurs animaux, un animal avoir plusieurs propriétaires.
+  d.taches = d.taches.map((t) => {
+    const { animalId, ...reste } = t as Tache & Ancien;
+    return { ...reste, animalIds: t.animalIds ?? (animalId ? [animalId] : []) };
+  });
+  d.animaux = d.animaux.map((a) => {
+    const { proprietaireId, ...reste } = a as Animal & Ancien;
+    return { ...reste, proprietaireIds: a.proprietaireIds ?? (proprietaireId ? [proprietaireId] : []) };
+  });
+  return d;
 }
 
 export function nouvelId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
-type Collection = 'animaux' | 'taches' | 'realisations' | 'rdvs' | 'contacts' | 'personnes' | 'operations' | 'remboursements';
+type Collection =
+  | 'animaux'
+  | 'taches'
+  | 'realisations'
+  | 'rdvs'
+  | 'contacts'
+  | 'personnes'
+  | 'operations'
+  | 'remboursements'
+  | 'notes'
+  | 'produits';
 type Element<C extends Collection> = Donnees[C][number];
 
 interface Store {
@@ -36,6 +64,7 @@ interface Store {
   supprimer: (collection: Collection, id: string) => void;
   basculerRealisation: (tacheId: string, jour: string, details?: Partial<Realisation>) => void;
   remplacerTout: (d: Donnees) => void;
+  majListes: (listes: Listes) => void;
 }
 
 const Contexte = createContext<Store | null>(null);
@@ -94,12 +123,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           // Nettoyage des liens vers l'élément supprimé.
           if (collection === 'taches') suite.realisations = suite.realisations.filter((r) => r.tacheId !== id);
           if (collection === 'animaux') {
-            suite.taches = suite.taches.filter((t) => t.animalId !== id);
+            // Une tâche qui ne concernait que cet animal disparaît, les autres le perdent simplement.
+            const seules = new Set(suite.taches.filter((t) => t.animalIds.length === 1 && t.animalIds[0] === id).map((t) => t.id));
+            suite.taches = suite.taches
+              .filter((t) => !seules.has(t.id))
+              .map((t) => ({ ...t, animalIds: t.animalIds.filter((a) => a !== id) }));
+            suite.realisations = suite.realisations.filter((r) => !seules.has(r.tacheId));
+            suite.notes = suite.notes.map((n) => ({ ...n, animalIds: n.animalIds.filter((a) => a !== id) }));
             suite.rdvs = suite.rdvs.map((r) => ({ ...r, animalIds: r.animalIds.filter((a) => a !== id) }));
             suite.operations = suite.operations.map((o) => (o.animalId === id ? { ...o, animalId: undefined } : o));
           }
           if (collection === 'personnes') {
             suite.taches = suite.taches.map((t) => (t.assigneA === id ? { ...t, assigneA: undefined } : t));
+            suite.animaux = suite.animaux.map((a) => ({ ...a, proprietaireIds: a.proprietaireIds.filter((p) => p !== id) }));
           }
           return suite;
         }),
@@ -120,6 +156,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return { ...d, realisations: [...d.realisations.filter((x) => x.id !== r.id), r] };
         }),
       remplacerTout: (nouvelles) => appliquer(() => normaliser(nouvelles)),
+      majListes: (listes) => appliquer((d) => ({ ...d, listes })),
     }),
     [pret, donnees, appliquer],
   );
@@ -144,6 +181,12 @@ export function useTache(id?: string): Tache | undefined {
 }
 export function useRdv(id?: string): RendezVous | undefined {
   return useStore().donnees.rdvs.find((r) => r.id === id);
+}
+export function useNote(id?: string) {
+  return useStore().donnees.notes.find((n) => n.id === id);
+}
+export function useProduit(id?: string) {
+  return useStore().donnees.produits.find((p) => p.id === id);
 }
 export function usePersonne(id?: string): Personne | undefined {
   return useStore().donnees.personnes.find((p) => p.id === id);

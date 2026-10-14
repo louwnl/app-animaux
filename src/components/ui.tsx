@@ -277,7 +277,7 @@ export function BoutonFlottant({ onPress }: { onPress: () => void }) {
   );
 }
 
-export function confirmer(message: string, action: () => void) {
+export function confirmer(message: string, action: () => void, bouton = 'Supprimer') {
   if (Platform.OS === 'web') {
     // eslint-disable-next-line no-alert
     if (window.confirm(message)) action();
@@ -285,7 +285,7 @@ export function confirmer(message: string, action: () => void) {
   }
   Alert.alert('Confirmer', message, [
     { text: 'Annuler', style: 'cancel' },
-    { text: 'Supprimer', style: 'destructive', onPress: action },
+    { text: bouton, style: 'destructive', onPress: action },
   ]);
 }
 

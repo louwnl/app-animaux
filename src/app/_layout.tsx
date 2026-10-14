@@ -39,6 +39,13 @@ function Contenu() {
       <Stack.Screen name="finances/remboursement" options={{ title: 'Remboursement', presentation: 'modal' }} />
       <Stack.Screen name="finances/personne" options={{ title: 'Compte' }} />
       <Stack.Screen name="sauvegarde" options={{ title: 'Sauvegarde' }} />
+      <Stack.Screen name="notes" options={{ title: 'Carnet de notes' }} />
+      <Stack.Screen name="note/edit" options={{ title: 'Note', presentation: 'modal' }} />
+      <Stack.Screen name="stock/edit" options={{ title: 'Produit', presentation: 'modal' }} />
+      <Stack.Screen name="parametres" options={{ title: 'Paramètres' }} />
+      <Stack.Screen name="partage" options={{ title: 'Partager' }} />
+      <Stack.Screen name="scanner" options={{ title: 'Scanner un QR code' }} />
+      <Stack.Screen name="import" options={{ title: 'Fiche partagée' }} />
     </Stack>
   );
 }

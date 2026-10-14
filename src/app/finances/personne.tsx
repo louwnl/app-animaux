@@ -23,7 +23,7 @@ export default function ComptePersonne() {
     .filter((r) => r.de === personne.id || r.a === personne.id)
     .sort((a, b) => b.date.localeCompare(a.date));
   const taches = donnees.taches.filter((t) => t.assigneA === personne.id);
-  const animaux = donnees.animaux.filter((a) => a.statut === 'autre_proprio' && a.proprietaireId === personne.id);
+  const animaux = donnees.animaux.filter((a) => a.statut !== 'parti' && a.proprietaireIds.includes(personne.id));
 
   return (
     <Ecran>

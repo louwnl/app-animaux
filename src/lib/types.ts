@@ -24,13 +24,15 @@ export interface Animal {
   robe?: string;
   identification?: string;
   statut: StatutAnimal;
-  proprietaireId?: string; // Personne, pour un animal qui appartient à quelqu'un d'autre
+  /** Personnes propriétaires : les propriétaires d'un animal à quelqu'un d'autre, ou les copropriétaires d'un animal à moi. */
+  proprietaireIds: string[];
   notes?: string;
   accueils: Accueil[];
   creeLe: string;
 }
 
-export type CategorieTache = 'nettoyage' | 'alimentation' | 'soins' | 'travail' | 'autre';
+/** Identifiant d'une entrée de liste personnalisable (voir Listes). */
+export type CategorieTache = string;
 
 export type Recurrence =
   | { type: 'unique' }
@@ -43,7 +45,7 @@ export interface Tache {
   id: string;
   titre: string;
   categorie: CategorieTache;
-  animalId?: string;
+  animalIds: string[];
   lieu?: string;
   recurrence: Recurrence;
   dateDebut: string; // AAAA-MM-JJ
@@ -53,7 +55,7 @@ export interface Tache {
   assigneA?: string; // id de Personne ; absent = moi
 }
 
-export type TypeSeance = 'longe' | 'monte' | 'liberte' | 'balade' | 'autre';
+export type TypeSeance = string;
 
 /** Une occurrence de tâche cochée. */
 export interface Realisation {
@@ -113,17 +115,7 @@ export interface Personne {
   notes?: string;
 }
 
-export type CategorieOperation =
-  | 'alimentation'
-  | 'litiere'
-  | 'veterinaire'
-  | 'marechal'
-  | 'soins'
-  | 'materiel'
-  | 'pension'
-  | 'terrain'
-  | 'adoption'
-  | 'autre';
+export type CategorieOperation = string;
 
 export interface Operation {
   id: string;
@@ -150,8 +142,41 @@ export interface Remboursement {
   notes?: string;
 }
 
+/** Une entrée d'une liste personnalisable (catégorie, type de séance…). */
+export interface Option {
+  id: string;
+  emoji: string;
+  nom: string;
+}
+
+export interface Listes {
+  categoriesTache: Option[];
+  categoriesOperation: Option[];
+  typesSeance: Option[];
+}
+
+/** Une note du carnet, liée ou non à des animaux. */
+export interface Note {
+  id: string;
+  titre: string;
+  texte: string;
+  animalIds: string[];
+  modifieLe: string; // ISO
+}
+
+/** Un produit en stock (foin, grain, croquettes…), compté dans l'unité choisie. */
+export interface Produit {
+  id: string;
+  nom: string;
+  emoji: string;
+  unite: string;
+  quantite: number;
+  seuil?: number; // alerte quand la quantité descend à ce niveau
+  notes?: string;
+}
+
 export interface Donnees {
-  version: 1 | 2;
+  version: 3;
   animaux: Animal[];
   taches: Tache[];
   realisations: Realisation[];
@@ -160,4 +185,7 @@ export interface Donnees {
   personnes: Personne[];
   operations: Operation[];
   remboursements: Remboursement[];
+  notes: Note[];
+  produits: Produit[];
+  listes: Listes;
 }
