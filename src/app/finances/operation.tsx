@@ -32,7 +32,7 @@ export default function EditionOperation() {
       montant: 0,
       sens: 'depense',
       categorie: 'alimentation',
-      animalId: params.animalId,
+      animalIds: params.animalId ? [params.animalId] : [],
       payePar: MOI,
       partageAvec: [],
     },
@@ -46,7 +46,7 @@ export default function EditionOperation() {
   const maj = (champs: Partial<Operation>) => setO((x) => ({ ...x, ...champs }));
 
   const gens: [string, string][] = [[MOI, 'Moi'], ...donnees.personnes.map((p) => [p.id, p.nom] as [string, string])];
-  const animaux = donnees.animaux.filter((a) => a.statut !== 'parti' || a.id === o.animalId);
+  const animaux = donnees.animaux.filter((a) => a.statut !== 'parti' || o.animalIds.includes(a.id));
   const montant = lireMontant(montantTexte);
   const recette = o.sens === 'recette';
   const partage = !recette && o.partageAvec.length > 1;
@@ -75,12 +75,13 @@ export default function EditionOperation() {
     const op: Operation = { ...o, libelle, montant, partageAvec: recette ? [] : o.partageAvec };
     if (inegal) {
       // Les centimes d'arrondi des pourcentages vont au payeur (ou au premier participant).
-      const reste = Math.round((montant - Object.values(parts).reduce((a, b) => a + b, 0)) * 100) / 100;
+      const arrondies = { ...parts };
+      const reste = Math.round((montant - Object.values(arrondies).reduce((a, b) => a + b, 0)) * 100) / 100;
       if (reste !== 0) {
         const qui = o.partageAvec.includes(o.payePar) ? o.payePar : o.partageAvec[0];
-        parts[qui] = Math.round((parts[qui] + reste) * 100) / 100;
+        arrondies[qui] = Math.round((arrondies[qui] + reste) * 100) / 100;
       }
-      op.parts = parts;
+      op.parts = arrondies;
     } else delete op.parts;
     enregistrer('operations', op);
     router.back();
@@ -102,10 +103,10 @@ export default function EditionOperation() {
       <ChampDate label="Date" mode="date" valeur={o.date} onChange={(v) => v && maj({ date: v })} />
       {animaux.length > 0 && (
         <Choix
-          label="Pour quel animal ? (facultatif)"
+          label="Pour quels animaux ? (facultatif)"
           options={animaux.map((a) => [a.id, `${EMOJI_ESPECE[a.espece]} ${a.nom}`] as [string, string])}
-          valeur={o.animalId}
-          onChange={(animalId) => maj({ animalId: animalId === o.animalId ? undefined : animalId })}
+          valeur={o.animalIds}
+          onChange={(id) => maj({ animalIds: o.animalIds.includes(id) ? o.animalIds.filter((x) => x !== id) : [...o.animalIds, id] })}
         />
       )}
 
@@ -141,12 +142,12 @@ export default function EditionOperation() {
               {o.partageAvec.length} personnes · {euros(montant / o.partageAvec.length)} chacune
             </Text>
           ) : (
-            !partage && <Petit>Laisse vide si la dépense n'est pas partagée.</Petit>
+            !partage && <Petit>Laisse vide si la dépense n’est pas partagée.</Petit>
           )}
         </>
       )}
       {!recette && donnees.personnes.length === 0 && (
-        <Petit>Pour partager une dépense, ajoute d'abord les personnes concernées dans Plus › Personnes.</Petit>
+        <Petit>Pour partager une dépense, ajoute d’abord les personnes concernées dans Plus › Personnes.</Petit>
       )}
 
       <Champ label="Notes" value={o.notes ?? ''} onChangeText={(notes) => maj({ notes })} multiline />

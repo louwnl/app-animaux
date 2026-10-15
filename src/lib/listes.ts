@@ -1,4 +1,5 @@
 import type { Listes, Option } from './types';
+import { PRODUITS_SUGGERES, UNITES } from './stock';
 
 /** Listes de départ, reprises des choix fixes des versions précédentes (mêmes identifiants). */
 export const LISTES_DEFAUT: Listes = {
@@ -21,6 +22,24 @@ export const LISTES_DEFAUT: Listes = {
     { id: 'adoption', emoji: '🐾', nom: 'Adoption / refuge' },
     { id: 'autre', emoji: '📌', nom: 'Autre' },
   ],
+  categoriesNote: [
+    { id: 'sante', emoji: '💊', nom: 'Santé' },
+    { id: 'alimentation', emoji: '🥕', nom: 'Alimentation' },
+    { id: 'tuto', emoji: '🛠️', nom: 'Tutos' },
+    { id: 'divers', emoji: '📒', nom: 'Divers' },
+  ],
+  typesSante: [
+    { id: 'vaccin', emoji: '💉', nom: 'Vaccin' },
+    { id: 'vermifuge', emoji: '💊', nom: 'Vermifuge' },
+    { id: 'antiparasitaire', emoji: '🪲', nom: 'Antiparasitaire' },
+    { id: 'marechal', emoji: '🧲', nom: 'Maréchal / parage' },
+    { id: 'dentiste', emoji: '🦷', nom: 'Dentiste' },
+    { id: 'osteo', emoji: '🤲', nom: 'Ostéo' },
+    { id: 'griffes', emoji: '✂️', nom: 'Griffes / dents (lapin)' },
+    { id: 'autre', emoji: '📌', nom: 'Autre' },
+  ],
+  produitsStock: PRODUITS_SUGGERES.map((p, i) => ({ id: `p${i}`, ...p })),
+  unitesStock: UNITES.map((u) => ({ id: u, emoji: '', nom: u })),
   typesSeance: [
     { id: 'longe', emoji: '🔄', nom: 'Longe' },
     { id: 'monte', emoji: '🏇', nom: 'Monté' },
@@ -34,6 +53,10 @@ export const NOMS_LISTES: Record<keyof Listes, string> = {
   categoriesTache: 'Catégories de tâches',
   categoriesOperation: 'Catégories de dépenses',
   typesSeance: 'Types de séances',
+  categoriesNote: 'Catégories de notes',
+  typesSante: 'Types de soins',
+  produitsStock: 'Produits du stock (ajout rapide)',
+  unitesStock: 'Unités du stock',
 };
 
 /** L'entrée d'une liste, ou une entrée de remplacement si elle a disparu. */

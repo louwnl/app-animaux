@@ -5,6 +5,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useStore } from '../../lib/store';
 import { ajouterJours, formatJour, jourISO, tacheActive, tacheLeJour } from '../../lib/dates';
 import { aRacheter, quantiteTexte } from '../../lib/stock';
+import { placeDe } from '../../lib/fonctions';
+import { echeances } from '../../lib/sante';
+import { CarteEcheance } from '../../components/sante';
 import { BoutonFlottant, Carte, Ecran, Petit, Titre, Vide, couleurs } from '../../components/ui';
 import { CarteRdv, CarteSuivi, LigneTache } from '../../components/elements';
 
@@ -32,6 +35,7 @@ export default function Aujourdhui() {
     .sort((a, b) => a.dateHeure.localeCompare(b.dateHeure));
 
   const aAcheter = donnees.produits.filter(aRacheter);
+  const soinsProches = placeDe(donnees.reglages, 'sante') === 'masque' ? [] : echeances(donnees).filter((e) => e.dans <= 7);
 
   const basculer = (tacheId: string, categorie: string) => {
     // Pour le travail des chevaux, on note la séance en cochant.
@@ -53,7 +57,7 @@ export default function Aujourdhui() {
             <Text style={{ fontSize: 20, fontWeight: '700', color: couleurs.texte, textTransform: 'capitalize' }}>
               {formatJour(jour)}
             </Text>
-            {!estAujourdhui && <Petit>Revenir à aujourd'hui</Petit>}
+            {!estAujourdhui && <Petit>Revenir à aujourd’hui</Petit>}
           </Pressable>
           <Pressable onPress={() => setJour(ajouterJours(jour, 1))} hitSlop={10}>
             <Ionicons name="chevron-forward" size={24} color={couleurs.doux} />
@@ -68,7 +72,7 @@ export default function Aujourdhui() {
         {estAujourdhui && aAcheter.length > 0 && (
           <>
             <Titre>À racheter</Titre>
-            <Carte onPress={() => router.push('/stock')} style={{ gap: 4, borderColor: couleurs.ambre, backgroundColor: '#FFF8EC' }}>
+            <Carte onPress={() => router.push(placeDe(donnees.reglages, 'stock') === 'barre' ? '/stock' : '/vue/stock')} style={{ gap: 4, borderColor: couleurs.ambre, backgroundColor: '#FFF8EC' }}>
               {aAcheter.map((p) => (
                 <Text key={p.id} style={{ color: couleurs.texte, fontSize: 15 }}>
                   {p.emoji} {p.nom} <Text style={{ color: couleurs.ambre, fontWeight: '600' }}>· reste {quantiteTexte(p.quantite, p.unite)}</Text>
@@ -77,6 +81,9 @@ export default function Aujourdhui() {
             </Carte>
           </>
         )}
+
+        {estAujourdhui && soinsProches.length > 0 && <Titre>Santé</Titre>}
+        {estAujourdhui && soinsProches.map((e) => <CarteEcheance key={e.soin.id} e={e} />)}
 
         {suivis.length > 0 && <Titre>Suivis</Titre>}
         {suivis.map((t) => (

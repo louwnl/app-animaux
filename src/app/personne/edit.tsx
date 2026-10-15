@@ -31,7 +31,7 @@ export default function EditionPersonne() {
       <Bouton titre="Enregistrer" onPress={valider} />
       {existante &&
         (aDesComptes ? (
-          <Petit>{existante.nom} apparaît dans tes finances : supprime d'abord ses dépenses et remboursements pour pouvoir la retirer.</Petit>
+          <Petit>{existante.nom} apparaît dans tes finances : supprime d’abord ses dépenses et remboursements pour pouvoir la retirer.</Petit>
         ) : (
           <Bouton
             titre="Supprimer"

@@ -26,6 +26,10 @@ export interface Animal {
   statut: StatutAnimal;
   /** Personnes propriétaires : les propriétaires d'un animal à quelqu'un d'autre, ou les copropriétaires d'un animal à moi. */
   proprietaireIds: string[];
+  /** Photo : nom du fichier dans le dossier photos (Android) ou image en data URI (web). */
+  photo?: string;
+  /** Afficher la courbe de poids sur la fiche. */
+  suiviPoids?: boolean;
   notes?: string;
   accueils: Accueil[];
   creeLe: string;
@@ -52,7 +56,8 @@ export interface Tache {
   dateFin?: string;
   heure?: string; // HH:MM
   rappel: boolean;
-  assigneA?: string; // id de Personne ; absent = moi
+  /** Qui s'en occupe : ids de Personne, et MOI. Vide = moi. */
+  assigneeIds: string[];
 }
 
 export type TypeSeance = string;
@@ -95,6 +100,8 @@ export type CategorieContact =
 
 export interface Contact {
   id: string;
+  /** Sites web (commande en ligne…). */
+  liens?: string[];
   nom: string;
   structure?: string;
   categorie: CategorieContact;
@@ -124,7 +131,7 @@ export interface Operation {
   montant: number; // en euros, toujours positif
   sens: 'depense' | 'recette';
   categorie: CategorieOperation;
-  animalId?: string;
+  animalIds: string[];
   payePar: string; // MOI ou id de Personne
   /** Personnes qui se partagent la dépense à parts égales (MOI inclus le cas échéant). Vide = seul le payeur. */
   partageAvec: string[];
@@ -149,7 +156,17 @@ export interface Option {
   nom: string;
 }
 
+export interface OptionProduit extends Option {
+  unite: string;
+}
+
 export interface Listes {
+  categoriesNote: Option[];
+  typesSante: Option[];
+  /** Produits proposés en ajout rapide dans le stock. */
+  produitsStock: OptionProduit[];
+  /** Unités proposées pour le stock (seul le nom compte). */
+  unitesStock: Option[];
   categoriesTache: Option[];
   categoriesOperation: Option[];
   typesSeance: Option[];
@@ -158,6 +175,7 @@ export interface Listes {
 /** Une note du carnet, liée ou non à des animaux. */
 export interface Note {
   id: string;
+  categorie?: string;
   titre: string;
   texte: string;
   animalIds: string[];
@@ -176,7 +194,7 @@ export interface Produit {
 }
 
 export interface Donnees {
-  version: 3;
+  version: 4;
   animaux: Animal[];
   taches: Tache[];
   realisations: Realisation[];
@@ -188,4 +206,34 @@ export interface Donnees {
   notes: Note[];
   produits: Produit[];
   listes: Listes;
+  soins: Soin[];
+  pesees: Pesee[];
+  reglages: Reglages;
+}
+
+/** Un soin de santé (vaccin, vermifuge, maréchal…) fait à une date, avec la prochaine échéance éventuelle. */
+export interface Soin {
+  id: string;
+  type: string; // Listes.typesSante
+  animalIds: string[];
+  date: string; // AAAA-MM-JJ, jour où il a été fait
+  prochaine?: string; // AAAA-MM-JJ, prochaine échéance
+  rappel: boolean;
+  notes?: string;
+}
+
+export interface Pesee {
+  id: string;
+  animalId: string;
+  date: string; // AAAA-MM-JJ
+  kg: number;
+}
+
+/** Fonctions de l'app qu'on peut placer dans la barre du bas, dans Plus, ou masquer. */
+export type FonctionId = 'calendrier' | 'animaux' | 'stock' | 'finances' | 'taches' | 'rdv' | 'sante' | 'notes' | 'contacts' | 'personnes';
+export type Place = 'barre' | 'plus' | 'masque';
+
+export interface Reglages {
+  /** Ordre et place de chaque fonction. */
+  fonctions: { id: FonctionId; place: Place }[];
 }

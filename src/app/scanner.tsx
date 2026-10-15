@@ -14,7 +14,7 @@ export default function Scanner() {
   if (!permission.granted) {
     return (
       <Ecran>
-        <Petit>L'app a besoin de la caméra pour lire le QR code d'une fiche partagée.</Petit>
+        <Petit>L’app a besoin de la caméra pour lire le QR code d’une fiche partagée.</Petit>
         <Bouton titre="Autoriser la caméra" onPress={demander} />
       </Ecran>
     );

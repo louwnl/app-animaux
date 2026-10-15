@@ -37,6 +37,32 @@
           "cameraPermission": "La caméra sert à scanner les QR codes de fiches partagées.",
           "recordAudioAndroid": false
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Pour choisir la photo d'un animal.",
+          "cameraPermission": "Pour prendre la photo d'un animal.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "TachesDuJour",
+              "label": "Tâches du jour",
+              "description": "Les tâches du jour, à cocher d'un appui",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
       ]
     ],
     "scheme": "mesanimaux"

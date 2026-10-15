@@ -37,6 +37,7 @@ export default function EditionTache() {
       titre: '',
       categorie: 'nettoyage',
       animalIds: params.animalId ? [params.animalId] : [],
+      assigneeIds: [],
       recurrence: { type: 'quotidienne' },
       dateDebut: params.jour ?? jourISO(),
       rappel: false,
@@ -80,10 +81,15 @@ export default function EditionTache() {
 
       {donnees.personnes.length > 0 && (
         <Choix
-          label="Qui s'en occupe ?"
+          label="Qui s'en occupe ? (plusieurs possibles)"
           options={[['moi', 'Moi'] as [string, string], ...donnees.personnes.map((p) => [p.id, p.nom] as [string, string])]}
-          valeur={t.assigneA ?? 'moi'}
-          onChange={(id) => maj({ assigneA: id === 'moi' ? undefined : id })}
+          valeur={t.assigneeIds.length === 0 ? ['moi'] : t.assigneeIds}
+          onChange={(id) => {
+            const actuels = t.assigneeIds.length === 0 ? ['moi'] : t.assigneeIds;
+            const suite = actuels.includes(id) ? actuels.filter((x) => x !== id) : [...actuels, id];
+            // « Moi » seul revient à ne confier la tâche à personne.
+            maj({ assigneeIds: suite.length === 1 && suite[0] === 'moi' ? [] : suite });
+          }}
         />
       )}
 
@@ -110,7 +116,7 @@ export default function EditionTache() {
       {t.recurrence.type === 'libre' && (
         <>
           <Petit>
-            Pour ce qu'on fait quand il faut (mettre le foin, nettoyer l'abreuvoir…) : tu notes chaque fois que c'est fait, l'app
+            Pour ce qu’on fait quand il faut (mettre le foin, nettoyer l’abreuvoir…) : tu notes chaque fois que c’est fait, l’app
             affiche la dernière fois et le note dans le calendrier.
           </Petit>
           <Champ

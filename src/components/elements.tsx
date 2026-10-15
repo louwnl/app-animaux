@@ -6,6 +6,7 @@ import { EMOJI_ESPECE, STATUTS, TYPES_RDV, nomsAnimaux } from '../lib/libelles';
 import { option } from '../lib/listes';
 import { useStore } from '../lib/store';
 import { proposerRappel } from '../lib/rappel';
+import { confiees, libelleConfiee } from '../lib/taches';
 import { age, derniereFois, ecartJours, formatDateHeure, formatJourCourt, ilYA, jourISO, libelleRecurrence } from '../lib/dates';
 import { Carte, Petit, couleurs } from './ui';
 
@@ -23,15 +24,24 @@ function cible(tache: Tache, animaux: Animal[]): string | undefined {
   return nomsAnimaux(tache.animalIds, animaux) || tache.lieu;
 }
 
-/** Petit bouton qui prépare un rappel par SMS ou WhatsApp pour la personne à qui la tâche est confiée. */
-function BoutonRappel({ tache, personne, jour }: { tache: Tache; personne?: Personne; jour?: string }) {
+/**
+ * Petit bouton qui prépare un rappel par SMS ou WhatsApp pour les personnes à qui la tâche est confiée.
+ * Une seule personne joignable : choix SMS / WhatsApp direct. Plusieurs : écran pour choisir à qui l'envoyer.
+ */
+function BoutonRappel({ tache, jour }: { tache: Tache; jour?: string }) {
   const { donnees } = useStore();
-  if (!personne?.telephone) return null;
+  const joignables = confiees(tache, donnees.personnes).filter((p) => p.telephone);
+  if (joignables.length === 0) return null;
+  const seule = joignables.length === 1 ? joignables[0] : undefined;
   return (
     <Pressable
-      onPress={() => proposerRappel(personne, tache, donnees.animaux, jour)}
+      onPress={() =>
+        seule
+          ? proposerRappel(seule, tache, donnees.animaux, jour)
+          : router.push({ pathname: '/rappel', params: { tacheId: tache.id, jour: jour ?? '' } })
+      }
       hitSlop={8}
-      accessibilityLabel={`Envoyer un rappel à ${personne.nom}`}
+      accessibilityLabel={seule ? `Envoyer un rappel à ${seule.nom}` : 'Envoyer un rappel'}
       style={({ pressed }) => [{ padding: 6, borderRadius: 10, backgroundColor: couleurs.accentClair }, pressed && { opacity: 0.7 }]}
     >
       <Ionicons name="chatbubble-ellipses-outline" size={20} color={couleurs.accent} />
@@ -83,9 +93,9 @@ export function LigneTache({
   onBasculer: () => void;
 }) {
   const { donnees } = useStore();
-  const confiee = personnes.find((p) => p.id === tache.assigneA);
+  const confiee = libelleConfiee(tache, personnes);
   const sous = [
-    confiee && `👤 ${confiee.nom}`,
+    confiee,
     cible(tache, animaux),
     tache.heure?.replace(':', 'h'),
     realisation?.seance &&
@@ -110,16 +120,16 @@ export function LigneTache({
         </Text>
         {!!sous && <Petit>{sous}</Petit>}
       </Pressable>
-      {!faite && <BoutonRappel tache={tache} personne={confiee} jour={jour} />}
+      {!faite && <BoutonRappel tache={tache} jour={jour} />}
     </Carte>
   );
 }
 
 export function CarteTache({ tache, animaux, personnes = [] }: { tache: Tache; animaux: Animal[]; personnes?: Personne[] }) {
   const { donnees } = useStore();
-  const confiee = personnes.find((p) => p.id === tache.assigneA);
+  const confiee = libelleConfiee(tache, personnes);
   const sous = [
-    confiee && `👤 ${confiee.nom}`,
+    confiee,
     libelleRecurrence(tache.recurrence),
     tache.heure?.replace(':', 'h'),
     cible(tache, animaux),
@@ -168,12 +178,12 @@ export function CarteSuivi({
   onBasculer: () => void;
 }) {
   const { donnees } = useStore();
-  const confiee = personnes.find((p) => p.id === tache.assigneA);
+  const confiee = libelleConfiee(tache, personnes);
   const faitCeJour = realisations.some((r) => r.tacheId === tache.id && r.date === jour);
   const derniere = derniereFois(tache.id, realisations);
   const alerte = tache.recurrence.type === 'libre' ? tache.recurrence.alerteApresJours : undefined;
   const enRetard = !!alerte && (!derniere || ecartJours(derniere, jourISO()) >= alerte);
-  const sous = [cible(tache, animaux), confiee && `👤 ${confiee.nom}`]
+  const sous = [cible(tache, animaux), confiee]
     .filter(Boolean)
     .join(' · ');
   return (
@@ -188,7 +198,7 @@ export function CarteSuivi({
         </Text>
         {!!sous && <Petit>{sous}</Petit>}
       </Pressable>
-      {enRetard && <BoutonRappel tache={tache} personne={confiee} />}
+      <BoutonRappel tache={tache} />
       <Pressable
         onPress={onBasculer}
         style={({ pressed }) => [

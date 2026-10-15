@@ -46,6 +46,13 @@ function Contenu() {
       <Stack.Screen name="partage" options={{ title: 'Partager' }} />
       <Stack.Screen name="scanner" options={{ title: 'Scanner un QR code' }} />
       <Stack.Screen name="import" options={{ title: 'Fiche partagée' }} />
+      <Stack.Screen name="rappel" options={{ title: 'Envoyer un rappel', presentation: 'modal' }} />
+      <Stack.Screen name="sante" options={{ title: 'Santé' }} />
+      <Stack.Screen name="soin/edit" options={{ title: 'Soin', presentation: 'modal' }} />
+      <Stack.Screen name="vue/calendrier" options={{ title: 'Calendrier' }} />
+      <Stack.Screen name="vue/animaux" options={{ title: 'Animaux' }} />
+      <Stack.Screen name="vue/stock" options={{ title: 'Stock' }} />
+      <Stack.Screen name="vue/finances" options={{ title: 'Finances' }} />
     </Stack>
   );
 }

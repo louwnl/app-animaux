@@ -24,17 +24,24 @@ export function messageRappel(tache: Tache, animaux: Animal[], jour?: string): s
   return `Petit rappel : ${quoi}${quand}${heure} 🙂 Merci !`;
 }
 
+export function ouvrirSms(tel: string, texte: string) {
+  return Linking.openURL(`sms:${tel.replace(/\s/g, '')}?body=${encodeURIComponent(texte)}`);
+}
+
+export function ouvrirWhatsapp(tel: string, texte: string) {
+  return Linking.openURL(`https://wa.me/${numeroInternational(tel)}?text=${encodeURIComponent(texte)}`).catch(() =>
+    Alert.alert('WhatsApp', "Impossible d'ouvrir WhatsApp."),
+  );
+}
+
 /** Ouvre SMS ou WhatsApp avec le rappel déjà écrit : il ne reste qu'à appuyer sur envoyer. */
 export function proposerRappel(personne: Personne, tache: Tache, animaux: Animal[], jour?: string) {
   if (!personne.telephone) return;
   const texte = messageRappel(tache, animaux, jour);
-  const sms = () => Linking.openURL(`sms:${personne.telephone!.replace(/\s/g, '')}?body=${encodeURIComponent(texte)}`);
-  const whatsapp = () =>
-    Linking.openURL(`https://wa.me/${numeroInternational(personne.telephone!)}?text=${encodeURIComponent(texte)}`).catch(() =>
-      Alert.alert('WhatsApp', "Impossible d'ouvrir WhatsApp."),
-    );
+  const sms = () => ouvrirSms(personne.telephone!, texte);
+  const whatsapp = () => ouvrirWhatsapp(personne.telephone!, texte);
   if (Platform.OS === 'web') {
-    // eslint-disable-next-line no-alert
+     
     if (window.confirm(`Envoyer par WhatsApp ? (Annuler = SMS)\n\n${texte}`)) whatsapp();
     else sms();
     return;

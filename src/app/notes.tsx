@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { router } from 'expo-router';
 import { useStore } from '../lib/store';
 import { EMOJI_ESPECE } from '../lib/libelles';
+import { choix } from '../lib/listes';
 import { BoutonFlottant, Champ, Choix, Ecran, Vide } from '../components/ui';
 import { CarteNote } from '../components/notes';
 
@@ -17,22 +18,32 @@ export default function Carnet() {
   const { donnees } = useStore();
   const [recherche, setRecherche] = useState('');
   const [animalId, setAnimalId] = useState<string | undefined>();
+  const [categorie, setCategorie] = useState<string | undefined>();
 
   const mots = simplifier(recherche).split(/\s+/).filter(Boolean);
   const notes = donnees.notes
     .filter((n) => !animalId || (animalId === 'aucun' ? n.animalIds.length === 0 : n.animalIds.includes(animalId)))
+    .filter((n) => !categorie || n.categorie === categorie)
     .filter((n) => {
       const texte = simplifier(`${n.titre} ${n.texte}`);
       return mots.every((m) => texte.includes(m));
     })
     .sort((a, b) => b.modifieLe.localeCompare(a.modifieLe));
 
+  const categoriesUtilisees = donnees.listes.categoriesNote.filter((c) => donnees.notes.some((n) => n.categorie === c.id));
   const animauxAvecNotes = donnees.animaux.filter((a) => donnees.notes.some((n) => n.animalIds.includes(a.id)));
 
   return (
     <View style={{ flex: 1 }}>
       <Ecran>
         <Champ label="Rechercher" value={recherche} onChangeText={setRecherche} placeholder="Ex. vermifuge, tracteur…" />
+        {categoriesUtilisees.length > 0 && (
+          <Choix
+            options={choix(categoriesUtilisees)}
+            valeur={categorie}
+            onChange={(c) => setCategorie(c === categorie ? undefined : c)}
+          />
+        )}
         {animauxAvecNotes.length > 0 && (
           <Choix
             options={[
@@ -54,7 +65,17 @@ export default function Carnet() {
           <CarteNote key={n.id} note={n} />
         ))}
       </Ecran>
-      <BoutonFlottant onPress={() => router.push(animalId && animalId !== 'aucun' ? `/note/edit?animalId=${animalId}` : '/note/edit')} />
+      <BoutonFlottant
+        onPress={() =>
+          router.push({
+            pathname: '/note/edit',
+            params: {
+              ...(animalId && animalId !== 'aucun' ? { animalId } : {}),
+              ...(categorie ? { categorie } : {}),
+            },
+          })
+        }
+      />
     </View>
   );
 }

@@ -1,8 +1,9 @@
 import type { Produit } from './types';
 
+/** Unités de départ, modifiables dans les paramètres. */
 export const UNITES = ['ballot', 'botte', 'kg', 'litre', 'sac', 'paquet', 'boîte', 'pièce'];
 
-/** Produits proposés pour démarrer vite. */
+/** Produits proposés pour démarrer vite, modifiables dans les paramètres. */
 export const PRODUITS_SUGGERES: Pick<Produit, 'nom' | 'emoji' | 'unite'>[] = [
   { nom: 'Foin des chevaux', emoji: '🌾', unite: 'ballot' },
   { nom: 'Grain des chevaux', emoji: '🌽', unite: 'sac' },
@@ -13,6 +14,7 @@ export const PRODUITS_SUGGERES: Pick<Produit, 'nom' | 'emoji' | 'unite'>[] = [
   { nom: 'Litière', emoji: '🧺', unite: 'sac' },
 ];
 
+/** Emojis proposés en plus de ceux des produits des paramètres. */
 export const EMOJIS_PRODUIT = ['🌾', '🌽', '🥕', '🥬', '🍎', '🐇', '🐈', '🐎', '🧺', '🪵', '💊', '🧴', '📦'];
 
 export function aRacheter(p: Produit): boolean {
