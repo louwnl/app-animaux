@@ -63,6 +63,12 @@ export function tacheActive(t: Tache, animaux: Animal[]): boolean {
   return t.animalIds.some((id) => animaux.find((a) => a.id === id)?.statut !== 'parti');
 }
 
+/** Tâche finie : ponctuelle déjà passée, ou arrivée à sa date de fin. */
+export function tacheTerminee(t: Tache, aujourdhui: string): boolean {
+  if (t.dateFin && t.dateFin < aujourdhui) return true;
+  return t.recurrence.type === 'unique' && t.dateDebut < aujourdhui;
+}
+
 /** La tâche tombe-t-elle ce jour-là ? Les tâches d'animaux partis s'arrêtent. */
 export function tacheLeJour(t: Tache, jour: string, animaux: Animal[]): boolean {
   if (jour < t.dateDebut) return false;
