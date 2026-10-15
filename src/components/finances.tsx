@@ -4,15 +4,13 @@ import type { Animal, Operation, Personne } from '../lib/types';
 import { MOI } from '../lib/types';
 import { euros, partDe, participants } from '../lib/finances';
 import { libelle } from '../lib/listes';
-import { useStore } from '../lib/store';
+import { useStore , nomPersonne } from '../lib/store';
 import { formatJourCourt } from '../lib/dates';
-import { nomPersonne } from '../lib/store';
-import { EMOJI_ESPECE } from '../lib/libelles';
+import { nomsAnimaux } from '../lib/libelles';
 import { Carte, Petit, couleurs } from './ui';
 
 export function CarteOperation({ o, personnes, animaux }: { o: Operation; personnes: Personne[]; animaux: Animal[] }) {
   const { donnees } = useStore();
-  const animal = animaux.find((a) => a.id === o.animalId);
   const p = participants(o);
   const partage = p.length > 1;
   const maPart = partDe(o, MOI);
@@ -20,7 +18,7 @@ export function CarteOperation({ o, personnes, animaux }: { o: Operation; person
   const details = [
     formatJourCourt(o.date),
     libelle(donnees.listes.categoriesOperation, o.categorie),
-    animal ? `${EMOJI_ESPECE[animal.espece]} ${animal.nom}` : undefined,
+    nomsAnimaux(o.animalIds, animaux) || undefined,
   ]
     .filter(Boolean)
     .join(' · ');

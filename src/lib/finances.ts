@@ -64,7 +64,9 @@ export function bilan(operations: Operation[]): Bilan {
     if (part === 0) continue;
     maPart += part;
     cat.set(o.categorie, (cat.get(o.categorie) ?? 0) + part);
-    ani.set(o.animalId, (ani.get(o.animalId) ?? 0) + part);
+    // Une dépense pour plusieurs animaux est répartie à parts égales entre eux.
+    const ids = o.animalIds.length > 0 ? o.animalIds : [undefined];
+    for (const id of ids) ani.set(id, (ani.get(id) ?? 0) + part / ids.length);
   }
   const trie = <K,>(m: Map<K, number>) => [...m.entries()].sort((a, b) => b[1] - a[1]);
   return { maPart, payeParMoi, recettes, parCategorie: trie(cat), parAnimal: trie(ani) };

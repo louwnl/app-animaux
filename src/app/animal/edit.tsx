@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { Image, Platform, Switch, Text, View } from 'react-native';
 import { router, useLocalSearchParams, Stack } from 'expo-router';
 import { nouvelId, useAnimal, useStore } from '../../lib/store';
 import type { Animal, Espece, StatutAnimal } from '../../lib/types';
 import { ESPECES, STATUTS } from '../../lib/libelles';
 import { jourISO } from '../../lib/dates';
-import { Bouton, Champ, ChampDate, Choix, Ecran, Petit, confirmer } from '../../components/ui';
+import { enregistrerPhoto, prendrePhoto, supprimerPhoto, uriPhoto } from '../../lib/photos';
+import { Bouton, Champ, ChampDate, Choix, Ecran, Petit, confirmer, couleurs } from '../../components/ui';
 
 export default function EditionAnimal() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -25,6 +27,18 @@ export default function EditionAnimal() {
   );
   const maj = (champs: Partial<Animal>) => setA((x) => ({ ...x, ...champs }));
 
+  const choisirPhoto = async (source: 'galerie' | 'camera') => {
+    try {
+      const base64 = await prendrePhoto(source);
+      if (!base64) return;
+      // Une photo prise puis remplacée avant d'enregistrer ne sert plus.
+      if (a.photo !== existant?.photo) supprimerPhoto(a.photo);
+      maj({ photo: enregistrerPhoto(a.id, base64) });
+    } catch (e) {
+      console.warn('Photo', e);
+    }
+  };
+
   const valider = () => {
     if (!a.nom.trim()) return;
     const avecProprios = a.statut === 'mien' || a.statut === 'autre_proprio';
@@ -35,6 +49,7 @@ export default function EditionAnimal() {
       animal.accueils = [{ id: nouvelId(), type: animal.statut as 'famille_relais' | 'refuge', dateArrivee: jourISO() }];
     }
     enregistrer('animaux', animal);
+    if (existant?.photo && existant.photo !== animal.photo) supprimerPhoto(existant.photo);
     if (existant) router.back();
     else router.replace(`/animal/${animal.id}`);
   };
@@ -56,7 +71,7 @@ export default function EditionAnimal() {
             }
           />
         ) : (
-          a.statut === 'autre_proprio' && <Petit>Ajoute d'abord les propriétaires dans Plus › Personnes pour pouvoir les choisir ici.</Petit>
+          a.statut === 'autre_proprio' && <Petit>Ajoute d’abord les propriétaires dans Plus › Personnes pour pouvoir les choisir ici.</Petit>
         ))}
       <Champ label="Race" value={a.race ?? ''} onChangeText={(race) => maj({ race })} />
       <Choix
@@ -74,6 +89,27 @@ export default function EditionAnimal() {
         placeholder={a.espece === 'cheval' ? 'N° SIRE / UELN / puce' : 'N° de puce ou tatouage'}
       />
       <Champ label="Notes" value={a.notes ?? ''} onChangeText={(notes) => maj({ notes })} multiline placeholder="Caractère, santé, habitudes…" />
+
+      <View style={{ gap: 8 }}>
+        <Text style={{ fontSize: 13, fontWeight: '600', color: couleurs.doux, textTransform: 'uppercase', letterSpacing: 0.5 }}>Photo</Text>
+        {!!a.photo && <Image source={{ uri: uriPhoto(a.photo) }} style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 12 }} resizeMode="cover" />}
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flex: 1 }}>
+            <Bouton titre={a.photo ? 'Changer' : 'Choisir une photo'} variante="secondaire" onPress={() => choisirPhoto('galerie')} />
+          </View>
+          {Platform.OS !== 'web' && (
+            <View style={{ flex: 1 }}>
+              <Bouton titre="Prendre une photo" variante="secondaire" onPress={() => choisirPhoto('camera')} />
+            </View>
+          )}
+        </View>
+        {!!a.photo && <Bouton titre="Retirer la photo" variante="danger" onPress={() => maj({ photo: undefined })} />}
+      </View>
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}>
+        <Text style={{ color: couleurs.texte, fontSize: 16, flex: 1 }}>⚖️ Suivre son poids (courbe sur sa fiche)</Text>
+        <Switch value={!!a.suiviPoids} onValueChange={(suiviPoids) => maj({ suiviPoids })} trackColor={{ true: couleurs.accent }} />
+      </View>
       <Bouton titre="Enregistrer" onPress={valider} />
       {existant && (
         <Bouton
@@ -82,6 +118,7 @@ export default function EditionAnimal() {
           onPress={() =>
             confirmer(`Supprimer ${existant.nom} et ses tâches ? Pour garder l'historique, passe plutôt son statut à « Parti ».`, () => {
               supprimer('animaux', existant.id);
+              supprimerPhoto(existant.photo);
               router.dismissTo('/animaux');
             })
           }

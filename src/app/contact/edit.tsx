@@ -12,10 +12,15 @@ export default function EditionContact() {
 
   const [c, setC] = useState<Contact>(existant ?? { id: nouvelId(), nom: '', categorie: 'veterinaire' });
   const maj = (champs: Partial<Contact>) => setC((x) => ({ ...x, ...champs }));
+  const [liens, setLiens] = useState((existant?.liens ?? []).join('\n'));
 
   const valider = () => {
     if (!c.nom.trim()) return;
-    enregistrer('contacts', { ...c, nom: c.nom.trim() });
+    const sites = liens
+      .split(/[\n\s]+/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    enregistrer('contacts', { ...c, nom: c.nom.trim(), liens: sites.length > 0 ? sites : undefined });
     router.back();
   };
 
@@ -27,6 +32,15 @@ export default function EditionContact() {
       <Champ label="Structure" value={c.structure ?? ''} onChangeText={(structure) => maj({ structure })} placeholder="Ex. Clinique des Prés, SPA de…" />
       <Champ label="Téléphone" value={c.telephone ?? ''} onChangeText={(telephone) => maj({ telephone })} keyboardType="phone-pad" />
       <Champ label="E-mail" value={c.email ?? ''} onChangeText={(email) => maj({ email })} keyboardType="email-address" autoCapitalize="none" />
+      <Champ
+        label="Sites web (un par ligne)"
+        value={liens}
+        onChangeText={setLiens}
+        multiline
+        autoCapitalize="none"
+        keyboardType="url"
+        placeholder="Ex. www.boutique-cheval.fr"
+      />
       <Champ label="Adresse" value={c.adresse ?? ''} onChangeText={(adresse) => maj({ adresse })} />
       <Champ label="Notes" value={c.notes ?? ''} onChangeText={(notes) => maj({ notes })} multiline placeholder="Horaires, urgences, tarifs…" />
       <Bouton titre="Enregistrer" onPress={valider} />

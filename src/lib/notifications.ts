@@ -3,6 +3,9 @@ import * as Notifications from 'expo-notifications';
 import type { Donnees } from './types';
 import { ajouterJours, depuisJour, derniereFois, ilYA, jourISO, tacheLeJour } from './dates';
 import { nomsAnimaux } from './libelles';
+import { pourMoi } from './taches';
+import { echeances } from './sante';
+import { option } from './listes';
 
 // Les notifications locales ne sont pas disponibles sur le web.
 const actif = Platform.OS !== 'web';
@@ -65,7 +68,7 @@ export async function replanifierTout(d: Donnees): Promise<void> {
     const aujourdhui = jourISO();
     for (const t of d.taches) {
       // Seules les tâches dont je m'occupe me sont rappelées.
-      if (!t.rappel || !t.heure || (t.assigneA && t.assigneA !== 'moi')) continue;
+      if (!t.rappel || !t.heure || !pourMoi(t)) continue;
       const [h, m] = t.heure.split(':').map(Number);
       const animaux = nomsAnimaux(t.animalIds, d.animaux);
       if (t.recurrence.type === 'libre') {
@@ -95,6 +98,18 @@ export async function replanifierTout(d: Donnees): Promise<void> {
           date,
         });
       }
+    }
+
+    for (const e of echeances(d)) {
+      if (!e.soin.rappel) continue;
+      const type = option(d.listes.typesSante, e.soin.type);
+      const corps = nomsAnimaux(e.animalIds, d.animaux);
+      const veille = depuisJour(ajouterJours(e.jour, -1));
+      veille.setHours(9, 0, 0, 0);
+      const jour = depuisJour(e.jour);
+      jour.setHours(9, 0, 0, 0);
+      aPlanifier.push({ titre: `Demain : ${type.emoji} ${type.nom}`, corps, date: veille });
+      aPlanifier.push({ titre: `Aujourd'hui : ${type.emoji} ${type.nom}`, corps, date: jour });
     }
 
     const futurs = aPlanifier

@@ -279,7 +279,7 @@ export function BoutonFlottant({ onPress }: { onPress: () => void }) {
 
 export function confirmer(message: string, action: () => void, bouton = 'Supprimer') {
   if (Platform.OS === 'web') {
-    // eslint-disable-next-line no-alert
+     
     if (window.confirm(message)) action();
     return;
   }
@@ -291,7 +291,7 @@ export function confirmer(message: string, action: () => void, bouton = 'Supprim
 
 export function alerte(message: string) {
   if (Platform.OS === 'web') {
-    // eslint-disable-next-line no-alert
+     
     window.alert(message);
     return;
   }

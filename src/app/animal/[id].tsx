@@ -1,4 +1,9 @@
-import { Pressable, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
+import { uriPhoto } from '../../lib/photos';
+import { placeDe } from '../../lib/fonctions';
+import { echeances } from '../../lib/sante';
+import { CarteEcheance, CarteSoin } from '../../components/sante';
+import { SuiviPoids } from '../../components/poids';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useAnimal, useStore } from '../../lib/store';
 import { EMOJI_ESPECE, ESPECES, ISSUES, STATUTS, TYPES_ACCUEIL } from '../../lib/libelles';
@@ -28,7 +33,7 @@ export default function FicheAnimal() {
   if (!animal) {
     return (
       <Ecran>
-        <Vide>Cet animal n'existe plus.</Vide>
+        <Vide>Cet animal n’existe plus.</Vide>
       </Ecran>
     );
   }
@@ -45,7 +50,12 @@ export default function FicheAnimal() {
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 10);
   const proprio = proprietaires(animal, donnees.personnes);
-  const operations = donnees.operations.filter((o) => o.animalId === animal.id).sort((a, b) => b.date.localeCompare(a.date));
+  const aVenir = echeances(donnees, animal.id);
+  const soins = donnees.soins
+    .filter((s) => s.animalIds.includes(animal.id))
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 5);
+  const operations = donnees.operations.filter((o) => o.animalIds.includes(animal.id)).sort((a, b) => b.date.localeCompare(a.date));
   const annee = String(new Date().getFullYear());
   const accueils = [...animal.accueils].sort((a, b) => b.dateArrivee.localeCompare(a.dateArrivee));
   const sexe = animal.sexe === 'male' ? 'Mâle' : animal.sexe === 'femelle' ? 'Femelle' : undefined;
@@ -55,7 +65,15 @@ export default function FicheAnimal() {
     <Ecran>
       <Stack.Screen options={{ title: animal.nom }} />
       <Carte style={{ alignItems: 'center', gap: 6 }}>
-        <Text style={{ fontSize: 56 }}>{EMOJI_ESPECE[animal.espece]}</Text>
+        {animal.photo ? (
+          <Image
+            source={{ uri: uriPhoto(animal.photo) }}
+            style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 12 }}
+            resizeMode="cover"
+          />
+        ) : (
+          <Text style={{ fontSize: 56 }}>{EMOJI_ESPECE[animal.espece]}</Text>
+        )}
         <Text style={{ fontSize: 24, fontWeight: '700', color: couleurs.texte }}>{animal.nom}</Text>
         <Petit>
           {STATUTS[animal.statut]}
@@ -161,12 +179,41 @@ export default function FicheAnimal() {
         <Vide>Aucune dépense pour {animal.nom}.</Vide>
       ) : (
         <Petit>
-          Total (ma part) : {euros(bilan(operations).maPart)} · cette année : {euros(bilan(operations.filter((o) => o.date.startsWith(annee))).maPart)}
+          Total (ma part) : {euros(bilan(operations).maPart)} · cette année :{' '}
+          {euros(bilan(operations.filter((o) => o.date.startsWith(annee))).maPart)}
         </Petit>
       )}
       {operations.slice(0, 5).map((o) => (
         <CarteOperation key={o.id} o={o} personnes={donnees.personnes} animaux={donnees.animaux} />
       ))}
+
+      {animal.suiviPoids && (
+        <>
+          <Titre>Poids</Titre>
+          <SuiviPoids animalId={animal.id} />
+        </>
+      )}
+
+      {placeDe(donnees.reglages, 'sante') !== 'masque' && (
+        <>
+          <Titre
+            action={
+              <Pressable onPress={() => router.push(`/soin/edit?animalId=${animal.id}`)}>
+                <Text style={{ color: couleurs.accent, fontWeight: '600' }}>+ Soin</Text>
+              </Pressable>
+            }
+          >
+            Santé
+          </Titre>
+          {aVenir.length === 0 && soins.length === 0 && <Vide>Aucun soin noté (vaccin, vermifuge, maréchal…).</Vide>}
+          {aVenir.map((e) => (
+            <CarteEcheance key={e.soin.id} e={e} avecAnimaux={false} />
+          ))}
+          {soins.map((s) => (
+            <CarteSoin key={s.id} s={s} avecAnimaux={false} />
+          ))}
+        </>
+      )}
 
       <Titre
         action={

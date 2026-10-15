@@ -1,13 +1,28 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState, Platform } from 'react-native';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { MOI, type Animal, type Contact, type Donnees, type Listes, type Personne, type Realisation, type RendezVous, type Tache } from './types';
+import {
+  MOI,
+  type Animal,
+  type Contact,
+  type Donnees,
+  type Listes,
+  type Operation,
+  type Personne,
+  type Realisation,
+  type Reglages,
+  type RendezVous,
+  type Tache,
+} from './types';
 import { LISTES_DEFAUT } from './listes';
+import { completerReglages, REGLAGES_DEFAUT } from './fonctions';
 import { demanderPermission, replanifierTout } from './notifications';
+import { faitePar } from './taches';
 
-const CLE = 'mes-animaux:donnees';
+export const CLE = 'mes-animaux:donnees';
 
 const VIDE: Donnees = {
-  version: 3,
+  version: 4,
   animaux: [],
   taches: [],
   realisations: [],
@@ -19,25 +34,45 @@ const VIDE: Donnees = {
   notes: [],
   produits: [],
   listes: LISTES_DEFAUT,
+  soins: [],
+  pesees: [],
+  reglages: REGLAGES_DEFAUT,
 };
 
 /** Champs des versions précédentes, repris à la lecture. */
-type Ancien = { animalId?: string; proprietaireId?: string };
+type Ancien = { animalId?: string; proprietaireId?: string; assigneA?: string };
 
 /** Complète des données anciennes ou importées avec les collections manquantes et les migre au format actuel. */
 export function normaliser(brut: Partial<Donnees>): Donnees {
-  const d: Donnees = { ...VIDE, ...brut, version: 3 };
+  const d: Donnees = { ...VIDE, ...brut, version: 4 };
   d.listes = { ...LISTES_DEFAUT, ...brut.listes };
   // V4 : une tâche peut concerner plusieurs animaux, un animal avoir plusieurs propriétaires.
+  d.reglages = completerReglages(brut.reglages);
   d.taches = d.taches.map((t) => {
-    const { animalId, ...reste } = t as Tache & Ancien;
-    return { ...reste, animalIds: t.animalIds ?? (animalId ? [animalId] : []) };
+    const { animalId, assigneA, ...reste } = t as Tache & Ancien;
+    return {
+      ...reste,
+      animalIds: t.animalIds ?? (animalId ? [animalId] : []),
+      // V5 : plusieurs personnes par tâche.
+      assigneeIds: t.assigneeIds ?? (assigneA ? [assigneA] : []),
+    };
+  });
+  d.operations = d.operations.map((o) => {
+    const { animalId, ...reste } = o as Operation & Ancien;
+    return { ...reste, animalIds: o.animalIds ?? (animalId ? [animalId] : []) };
   });
   d.animaux = d.animaux.map((a) => {
     const { proprietaireId, ...reste } = a as Animal & Ancien;
     return { ...reste, proprietaireIds: a.proprietaireIds ?? (proprietaireId ? [proprietaireId] : []) };
   });
   return d;
+}
+
+/** Met à jour le widget d'écran d'accueil (Android seulement ; chargé à la demande pour éviter un import circulaire). */
+function rafraichirWidget(d: Donnees) {
+  if (Platform.OS !== 'android') return;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  (require('../widget/gestion') as typeof import('../widget/gestion')).rafraichirWidget(d);
 }
 
 export function nouvelId(): string {
@@ -54,7 +89,9 @@ type Collection =
   | 'operations'
   | 'remboursements'
   | 'notes'
-  | 'produits';
+  | 'produits'
+  | 'soins'
+  | 'pesees';
 type Element<C extends Collection> = Donnees[C][number];
 
 interface Store {
@@ -65,6 +102,7 @@ interface Store {
   basculerRealisation: (tacheId: string, jour: string, details?: Partial<Realisation>) => void;
   remplacerTout: (d: Donnees) => void;
   majListes: (listes: Listes) => void;
+  majReglages: (reglages: Reglages) => void;
 }
 
 const Contexte = createContext<Store | null>(null);
@@ -93,13 +131,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
+  // Le widget peut cocher des tâches pendant que l'app est en arrière-plan : on relit les données au retour.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const abonnement = AppState.addEventListener('change', (etat) => {
+      if (etat !== 'active') return;
+      AsyncStorage.getItem(CLE).then((brut) => {
+        if (brut) setDonnees(normaliser(JSON.parse(brut)));
+      });
+    });
+    return () => abonnement.remove();
+  }, []);
+
   const appliquer = useCallback((modif: (d: Donnees) => Donnees) => {
     setDonnees((avant) => {
       const apres = modif(avant);
       AsyncStorage.setItem(CLE, JSON.stringify(apres)).catch((e) => console.warn('Sauvegarde échouée', e));
       // Regroupe les reprogrammations quand plusieurs modifications s'enchaînent.
       if (delaiRappels.current) clearTimeout(delaiRappels.current);
-      delaiRappels.current = setTimeout(() => replanifierTout(apres), 800);
+      delaiRappels.current = setTimeout(() => {
+        replanifierTout(apres);
+        rafraichirWidget(apres);
+      }, 800);
       return apres;
     });
   }, []);
@@ -131,10 +184,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             suite.realisations = suite.realisations.filter((r) => !seules.has(r.tacheId));
             suite.notes = suite.notes.map((n) => ({ ...n, animalIds: n.animalIds.filter((a) => a !== id) }));
             suite.rdvs = suite.rdvs.map((r) => ({ ...r, animalIds: r.animalIds.filter((a) => a !== id) }));
-            suite.operations = suite.operations.map((o) => (o.animalId === id ? { ...o, animalId: undefined } : o));
+            suite.operations = suite.operations.map((o) => ({ ...o, animalIds: o.animalIds.filter((a) => a !== id) }));
+            suite.pesees = suite.pesees.filter((p) => p.animalId !== id);
+            const soinsSeuls = new Set(suite.soins.filter((s) => s.animalIds.length === 1 && s.animalIds[0] === id).map((s) => s.id));
+            suite.soins = suite.soins
+              .filter((s) => !soinsSeuls.has(s.id))
+              .map((s) => ({ ...s, animalIds: s.animalIds.filter((a) => a !== id) }));
           }
           if (collection === 'personnes') {
-            suite.taches = suite.taches.map((t) => (t.assigneA === id ? { ...t, assigneA: undefined } : t));
+            suite.taches = suite.taches.map((t) => ({ ...t, assigneeIds: t.assigneeIds.filter((p) => p !== id) }));
             suite.animaux = suite.animaux.map((a) => ({ ...a, proprietaireIds: a.proprietaireIds.filter((p) => p !== id) }));
           }
           return suite;
@@ -150,13 +208,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             tacheId,
             date: jour,
             faiteLe: new Date().toISOString(),
-            faitePar: d.taches.find((t) => t.id === tacheId)?.assigneA,
+            faitePar: faitePar(d.taches.find((t) => t.id === tacheId)),
             ...details,
           };
           return { ...d, realisations: [...d.realisations.filter((x) => x.id !== r.id), r] };
         }),
       remplacerTout: (nouvelles) => appliquer(() => normaliser(nouvelles)),
       majListes: (listes) => appliquer((d) => ({ ...d, listes })),
+      majReglages: (reglages) => appliquer((d) => ({ ...d, reglages })),
     }),
     [pret, donnees, appliquer],
   );

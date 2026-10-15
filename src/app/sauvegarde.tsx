@@ -19,7 +19,7 @@ function resume(d: Donnees): string {
 
 function confirmerRemplacement(message: string, action: () => void) {
   if (Platform.OS === 'web') {
-    // eslint-disable-next-line no-alert
+     
     if (window.confirm(message)) action();
     return;
   }
@@ -61,14 +61,14 @@ export default function Sauvegarde() {
   return (
     <Ecran>
       <Carte>
-        <Text style={{ color: couleurs.texte, fontWeight: '600' }}>Actuellement dans l'app</Text>
+        <Text style={{ color: couleurs.texte, fontWeight: '600' }}>Actuellement dans l’app</Text>
         <Petit>{resume(donnees)}</Petit>
       </Carte>
 
       <Titre>Exporter</Titre>
       <Petit>
         Crée un fichier avec toutes tes données. Enregistre-le dans Google Drive ou envoie-le-toi par e-mail : il permet de tout
-        retrouver si tu changes de téléphone ou réinstalles l'app.
+        retrouver si tu changes de téléphone ou réinstalles l’app.
       </Petit>
       <Bouton titre="Exporter mes données" onPress={lancerExport} />
 

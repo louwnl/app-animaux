@@ -3,14 +3,22 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { nouvelId, useNote, useStore } from '../../lib/store';
 import type { Note } from '../../lib/types';
 import { EMOJI_ESPECE } from '../../lib/libelles';
+import { choix } from '../../lib/listes';
 import { Bouton, Champ, Choix, Ecran, confirmer } from '../../components/ui';
 
 export default function EditionNote() {
-  const params = useLocalSearchParams<{ id?: string; animalId?: string }>();
+  const params = useLocalSearchParams<{ id?: string; animalId?: string; categorie?: string }>();
   const existante = useNote(params.id);
   const { donnees, enregistrer, supprimer } = useStore();
   const [n, setN] = useState<Note>(
-    existante ?? { id: nouvelId(), titre: '', texte: '', animalIds: params.animalId ? [params.animalId] : [], modifieLe: '' },
+    existante ?? {
+      id: nouvelId(),
+      titre: '',
+      texte: '',
+      categorie: params.categorie,
+      animalIds: params.animalId ? [params.animalId] : [],
+      modifieLe: '',
+    },
   );
   const maj = (champs: Partial<Note>) => setN((x) => ({ ...x, ...champs }));
   const animaux = donnees.animaux.filter((a) => a.statut !== 'parti' || n.animalIds.includes(a.id));
@@ -32,6 +40,12 @@ export default function EditionNote() {
         onChangeText={(texte) => maj({ texte })}
         multiline
         placeholder="Posologie, symptômes à surveiller, marche à suivre…"
+      />
+      <Choix
+        label="Catégorie (facultatif)"
+        options={choix(donnees.listes.categoriesNote)}
+        valeur={n.categorie}
+        onChange={(categorie) => maj({ categorie: categorie === n.categorie ? undefined : categorie })}
       />
       {animaux.length > 0 && (
         <Choix

@@ -5,12 +5,19 @@ import { File, Paths } from 'expo-file-system';
 import type { Donnees } from './types';
 import { jourISO } from './dates';
 import { normaliser } from './store';
+import { enregistrerPhoto, lirePhoto } from './photos';
 
 const MARQUEUR = 'mes-animaux';
 
 /** Crée le fichier de sauvegarde et ouvre le partage (Drive, e-mail…) ou le téléchargement sur le web. */
 export async function exporter(d: Donnees): Promise<void> {
-  const contenu = JSON.stringify({ application: MARQUEUR, exporteLe: new Date().toISOString(), donnees: d }, null, 2);
+  // Les photos sont des fichiers à part : on les joint en base64 pour qu'elles suivent la sauvegarde.
+  const photos: Record<string, string> = {};
+  for (const a of d.animaux) {
+    const b64 = await lirePhoto(a.photo);
+    if (b64) photos[a.id] = b64;
+  }
+  const contenu = JSON.stringify({ application: MARQUEUR, exporteLe: new Date().toISOString(), donnees: d, photos }, null, 2);
   const nom = `mes-animaux-${jourISO()}.json`;
 
   if (Platform.OS === 'web') {
@@ -37,7 +44,7 @@ export async function choisirSauvegarde(): Promise<Donnees | undefined> {
   const asset = res.assets[0];
   const texte = Platform.OS === 'web' && asset.file ? await asset.file.text() : await new File(asset.uri).text();
 
-  let json: { application?: string; donnees?: Partial<Donnees> };
+  let json: { application?: string; donnees?: Partial<Donnees>; photos?: Record<string, string> };
   try {
     json = JSON.parse(texte);
   } catch {
@@ -46,5 +53,16 @@ export async function choisirSauvegarde(): Promise<Donnees | undefined> {
   if (json.application !== MARQUEUR || !json.donnees || !Array.isArray(json.donnees.animaux)) {
     throw new Error("Ce fichier n'est pas une sauvegarde de Mes Animaux.");
   }
-  return normaliser(json.donnees);
+  const d = normaliser(json.donnees);
+  const photos = json.photos ?? {};
+  d.animaux = d.animaux.map((a) => {
+    const b64 = photos[a.id];
+    if (!b64) return { ...a, photo: a.photo?.startsWith('data:') ? a.photo : undefined };
+    try {
+      return { ...a, photo: enregistrerPhoto(a.id, b64) };
+    } catch {
+      return { ...a, photo: undefined };
+    }
+  });
+  return d;
 }

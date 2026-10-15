@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { nouvelId, useStore } from '../../lib/store';
 import type { Produit } from '../../lib/types';
-import { PRODUITS_SUGGERES, aRacheter, quantiteTexte } from '../../lib/stock';
+import { aRacheter, quantiteTexte } from '../../lib/stock';
 import { BoutonFlottant, Carte, Choix, Ecran, Petit, Titre, Vide, couleurs } from '../../components/ui';
 
 function BoutonQuantite({ icone, onPress, label }: { icone: 'remove' | 'add'; onPress: () => void; label: string }) {
@@ -45,7 +45,7 @@ function CarteProduit({ p, onChanger }: { p: Produit; onChanger: (delta: number)
 export default function Stock() {
   const { donnees, enregistrer } = useStore();
   const produits = [...donnees.produits].sort((a, b) => Number(aRacheter(b)) - Number(aRacheter(a)) || a.nom.localeCompare(b.nom, 'fr'));
-  const suggestions = PRODUITS_SUGGERES.filter((s) => !donnees.produits.some((p) => p.nom === s.nom));
+  const suggestions = donnees.listes.produitsStock.filter((s) => !donnees.produits.some((p) => p.nom === s.nom));
   const changer = (p: Produit, delta: number) =>
     enregistrer('produits', { ...p, quantite: Math.max(0, Math.round((p.quantite + delta) * 100) / 100) });
 
@@ -56,16 +56,16 @@ export default function Stock() {
         {produits.map((p) => (
           <CarteProduit key={p.id} p={p} onChanger={(d) => changer(p, d)} />
         ))}
-        {produits.length > 0 && <Petit>Touche − ou + à chaque ballot entamé ou rentré. Touche un produit pour corriger la quantité ou régler l'alerte.</Petit>}
+        {produits.length > 0 && <Petit>Touche − ou + à chaque ballot entamé ou rentré. Touche un produit pour corriger la quantité ou régler l’alerte.</Petit>}
         {suggestions.length > 0 && (
           <>
             <Titre>Ajouter rapidement</Titre>
             <Choix
-              options={suggestions.map((s) => [s.nom, `${s.emoji} ${s.nom}`] as [string, string])}
+              options={suggestions.map((s) => [s.id, `${s.emoji} ${s.nom}`] as [string, string])}
               valeur={undefined}
-              onChange={(nom) => {
-                const s = PRODUITS_SUGGERES.find((x) => x.nom === nom)!;
-                const p: Produit = { id: nouvelId(), ...s, quantite: 0 };
+              onChange={(id) => {
+                const s = suggestions.find((x) => x.id === id)!;
+                const p: Produit = { id: nouvelId(), nom: s.nom, emoji: s.emoji, unite: s.unite, quantite: 0 };
                 enregistrer('produits', p);
                 router.push(`/stock/edit?id=${p.id}`);
               }}

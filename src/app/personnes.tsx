@@ -18,7 +18,7 @@ export default function Personnes() {
         {liste.length === 0 && <Vide>Ajoute une première personne avec le bouton +.</Vide>}
         {liste.map((p) => {
           const s = solde(donnees, p.id);
-          const nbTaches = donnees.taches.filter((t) => t.assigneA === p.id).length;
+          const nbTaches = donnees.taches.filter((t) => t.assigneeIds.includes(p.id)).length;
           return (
             <Carte key={p.id} onPress={() => router.push(`/finances/personne?id=${p.id}`)} style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View style={{ flex: 1, gap: 2 }}>

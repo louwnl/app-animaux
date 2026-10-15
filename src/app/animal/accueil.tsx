@@ -49,7 +49,7 @@ export default function EditionAccueil() {
         <Choix label="Issue" options={ISSUES} valeur={ac.issue} onChange={(issue: IssueAccueil) => maj({ issue })} />
       )}
       {!!ac.dateDepart && animal.statut !== 'mien' && (
-        <Petit>En enregistrant un départ, {animal.nom} passe dans « Partis » et ses tâches s'arrêtent. Son historique est conservé.</Petit>
+        <Petit>En enregistrant un départ, {animal.nom} passe dans « Partis » et ses tâches s’arrêtent. Son historique est conservé.</Petit>
       )}
       <Champ label="Notes" value={ac.notes ?? ''} onChangeText={(notes) => maj({ notes })} multiline placeholder="Comportement, consignes du refuge…" />
       <Bouton titre="Enregistrer" onPress={valider} />
