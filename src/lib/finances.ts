@@ -26,7 +26,7 @@ export function partDe(o: Operation, personneId: string): number {
 export function solde(d: Donnees, personneId: string): number {
   let s = 0;
   for (const o of d.operations) {
-    if (o.sens !== 'depense') continue;
+    if (o.sens !== 'depense' || o.aPayer) continue;
     if (o.payePar === MOI) s += partDe(o, personneId);
     else if (o.payePar === personneId) s -= partDe(o, MOI);
   }
@@ -55,6 +55,7 @@ export function bilan(operations: Operation[]): Bilan {
   const cat = new Map<CategorieOperation, number>();
   const ani = new Map<string | undefined, number>();
   for (const o of operations) {
+    if (o.aPayer) continue;
     if (o.sens === 'recette') {
       if (o.payePar === MOI) recettes += o.montant;
       continue;

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Text } from 'react-native';
+import { Switch, Text, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { nouvelId, useStore } from '../../lib/store';
 import { MOI, type CategorieOperation, type Operation } from '../../lib/types';
@@ -20,7 +20,7 @@ function lireNombre(texte: string): number {
 const nombre = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
 
 export default function EditionOperation() {
-  const params = useLocalSearchParams<{ id?: string; animalId?: string }>();
+  const params = useLocalSearchParams<{ id?: string; animalId?: string; contactId?: string; aPayer?: string }>();
   const { donnees, enregistrer, supprimer } = useStore();
   const existante = donnees.operations.find((o) => o.id === params.id);
 
@@ -33,6 +33,8 @@ export default function EditionOperation() {
       sens: 'depense',
       categorie: 'alimentation',
       animalIds: params.animalId ? [params.animalId] : [],
+      contactId: params.contactId,
+      aPayer: params.aPayer === '1' || undefined,
       payePar: MOI,
       partageAvec: [],
     },
@@ -59,7 +61,7 @@ export default function EditionOperation() {
   const ecart = Math.round((cible - totalSaisi) * 100) / 100;
   const parts: Record<string, number> = {};
   o.partageAvec.forEach((id, i) => {
-    parts[id] = mode === 'pourcentages' ? Math.round(((montant ?? 0) * valeurs[i]) / 100 * 100) / 100 : valeurs[i];
+    parts[id] = mode === 'pourcentages' ? Math.round((((montant ?? 0) * valeurs[i]) / 100) * 100) / 100 : valeurs[i];
   });
 
   const valider = () => {
@@ -97,10 +99,48 @@ export default function EditionOperation() {
     <Ecran>
       <Stack.Screen options={{ title: existante ? "Modifier l'opération" : 'Nouvelle opération' }} />
       <Choix options={{ depense: 'Dépense', recette: 'Rentrée d’argent' }} valeur={o.sens} onChange={(sens) => maj({ sens })} />
-      <Champ label="Montant (€)" value={montantTexte} onChangeText={setMontantTexte} keyboardType="decimal-pad" placeholder="Ex. 45,90" autoFocus={!existante} />
-      <Choix label="Catégorie" options={choix(donnees.listes.categoriesOperation)} valeur={o.categorie} onChange={(categorie: CategorieOperation) => maj({ categorie })} />
+      <Champ
+        label="Montant (€)"
+        value={montantTexte}
+        onChangeText={setMontantTexte}
+        keyboardType="decimal-pad"
+        placeholder="Ex. 45,90"
+        autoFocus={!existante}
+      />
+      <Choix
+        label="Catégorie"
+        options={choix(donnees.listes.categoriesOperation)}
+        valeur={o.categorie}
+        onChange={(categorie: CategorieOperation) => maj({ categorie })}
+      />
       <Champ label="Libellé" value={o.libelle} onChangeText={(libelle) => maj({ libelle })} placeholder="Ex. Foin pour l'hiver" />
-      <ChampDate label="Date" mode="date" valeur={o.date} onChange={(v) => v && maj({ date: v })} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}>
+        <Text style={{ color: couleurs.texte, fontSize: 16, flex: 1 }}>
+          🗓️ {recette ? 'Pas encore reçue (à venir)' : 'Pas encore payée (à venir)'}
+        </Text>
+        <Switch value={!!o.aPayer} onValueChange={(v) => maj({ aPayer: v || undefined })} trackColor={{ true: couleurs.accent }} />
+      </View>
+      <ChampDate
+        label={o.aPayer ? 'Prévue pour le' : 'Date'}
+        mode="date"
+        valeur={o.date}
+        // Une nouvelle dépense datée dans le futur est forcément à venir.
+        onChange={(v) => v && maj({ date: v, ...(!existante && v > jourISO() ? { aPayer: true } : {}) })}
+      />
+      {donnees.contacts.length > 0 && (
+        <Choix
+          label="Pro concerné (facultatif)"
+          options={[...donnees.contacts].sort((a, b) => a.nom.localeCompare(b.nom, 'fr')).map((c) => [c.id, c.nom] as [string, string])}
+          valeur={o.contactId}
+          onChange={(id) => {
+            if (id === o.contactId) return maj({ contactId: undefined });
+            // Sur une nouvelle dépense, le pro choisi propose sa catégorie (véto → Vétérinaire…).
+            const cat = donnees.contacts.find((c) => c.id === id)?.categorie;
+            const assortie = !existante && donnees.listes.categoriesOperation.some((c) => c.id === cat);
+            maj({ contactId: id, ...(assortie ? { categorie: cat } : {}) });
+          }}
+        />
+      )}
       {animaux.length > 0 && (
         <Choix
           label="Pour quels animaux ? (facultatif)"

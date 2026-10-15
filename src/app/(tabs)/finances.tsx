@@ -47,9 +47,10 @@ export default function Finances() {
   const [mois, setMois] = useState(jourISO().slice(0, 7));
   const prefixe = periode === 'mois' ? mois : mois.slice(0, 4);
 
-  const operations = donnees.operations
-    .filter((o) => o.date.startsWith(prefixe))
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const operations = donnees.operations.filter((o) => !o.aPayer && o.date.startsWith(prefixe)).sort((a, b) => b.date.localeCompare(a.date));
+  // Dépenses prévues, toutes périodes confondues, de la plus proche à la plus lointaine.
+  const aVenir = donnees.operations.filter((o) => o.aPayer).sort((a, b) => a.date.localeCompare(b.date));
+  const totalAVenir = aVenir.reduce((t, o) => t + (o.sens === 'depense' ? o.montant : 0), 0);
   const b = bilan(operations);
 
   const soldes = donnees.personnes
@@ -66,6 +67,16 @@ export default function Finances() {
   return (
     <View style={{ flex: 1 }}>
       <Ecran>
+        {aVenir.length > 0 && (
+          <>
+            <Titre>À venir</Titre>
+            {totalAVenir > 0 && <Petit>Total prévu : {euros(totalAVenir)}. Touche « Payée » le jour où tu règles.</Petit>}
+            {aVenir.map((o) => (
+              <CarteOperation key={o.id} o={o} personnes={donnees.personnes} animaux={donnees.animaux} />
+            ))}
+            <Titre>Déjà faites</Titre>
+          </>
+        )}
         <Choix options={{ mois: 'Par mois', annee: 'Par année' }} valeur={periode} onChange={setPeriode} />
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Pressable onPress={() => setMois(decaler(mois, -pas))} hitSlop={10}>
@@ -87,7 +98,11 @@ export default function Finances() {
           <>
             <Titre>Comptes avec les autres</Titre>
             {soldes.map(({ p, s }) => (
-              <Carte key={p.id} onPress={() => router.push(`/finances/personne?id=${p.id}`)} style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Carte
+                key={p.id}
+                onPress={() => router.push(`/finances/personne?id=${p.id}`)}
+                style={{ flexDirection: 'row', alignItems: 'center' }}
+              >
                 <Text style={{ flex: 1, fontSize: 16, color: couleurs.texte }}>{p.nom}</Text>
                 <Text style={{ fontWeight: '700', color: s > 0 ? couleurs.accent : couleurs.danger }}>
                   {s > 0 ? `te doit ${euros(s)}` : `tu lui dois ${euros(-s)}`}
@@ -115,7 +130,12 @@ export default function Finances() {
               {b.parAnimal.map(([id, m]) => {
                 const a = donnees.animaux.find((x) => x.id === id);
                 return (
-                  <Barre key={id ?? 'general'} label={a ? `${EMOJI_ESPECE[a.espece]} ${a.nom}` : 'Général'} montant={m} max={b.parAnimal[0][1]} />
+                  <Barre
+                    key={id ?? 'general'}
+                    label={a ? `${EMOJI_ESPECE[a.espece]} ${a.nom}` : 'Général'}
+                    montant={m}
+                    max={b.parAnimal[0][1]}
+                  />
                 );
               })}
             </Carte>
@@ -123,7 +143,7 @@ export default function Finances() {
         )}
 
         <Titre>Opérations</Titre>
-        {operations.length === 0 && <Vide>Aucune dépense sur cette période. Ajoute-en une avec le bouton +.</Vide>}
+        {operations.length === 0 && <Vide>Aucune dépense réglée sur cette période. Ajoute-en une avec le bouton +.</Vide>}
         {operations.map((o) => (
           <CarteOperation key={o.id} o={o} personnes={donnees.personnes} animaux={donnees.animaux} />
         ))}
