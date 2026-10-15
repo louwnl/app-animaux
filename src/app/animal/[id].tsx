@@ -8,7 +8,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useAnimal, useStore } from '../../lib/store';
 import { EMOJI_ESPECE, ESPECES, ISSUES, STATUTS, TYPES_ACCUEIL } from '../../lib/libelles';
 import { option } from '../../lib/listes';
-import { age, formatJourCourt } from '../../lib/dates';
+import { age, formatJourCourt, jourISO, tacheTerminee } from '../../lib/dates';
 import { Bouton, Carte, Ecran, Petit, Titre, Vide, couleurs } from '../../components/ui';
 import { CarteRdv, CarteTache, proprietaires } from '../../components/elements';
 import { CarteNote } from '../../components/notes';
@@ -38,13 +38,16 @@ export default function FicheAnimal() {
     );
   }
 
-  const taches = donnees.taches.filter((t) => t.animalIds.includes(animal.id));
+  const aujourdhui = jourISO();
+  const toutesTaches = donnees.taches.filter((t) => t.animalIds.includes(animal.id));
+  // Les tâches ponctuelles passées et les tâches terminées ne s'affichent plus (leurs séances restent ci-dessous).
+  const taches = toutesTaches.filter((t) => !tacheTerminee(t, aujourdhui));
   const notes = donnees.notes.filter((n) => n.animalIds.includes(animal.id)).sort((a, b) => a.titre.localeCompare(b.titre, 'fr'));
   const maintenant = new Date().toISOString();
   const rdvs = donnees.rdvs.filter((r) => r.animalIds.includes(animal.id)).sort((a, b) => b.dateHeure.localeCompare(a.dateHeure));
   const rdvsAVenir = rdvs.filter((r) => r.dateHeure >= maintenant).reverse();
   const rdvsPasses = rdvs.filter((r) => r.dateHeure < maintenant).slice(0, 5);
-  const idsTaches = new Set(taches.map((t) => t.id));
+  const idsTaches = new Set(toutesTaches.map((t) => t.id));
   const seances = donnees.realisations
     .filter((r) => idsTaches.has(r.tacheId) && r.seance)
     .sort((a, b) => b.date.localeCompare(a.date))
