@@ -191,6 +191,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               .filter((s) => !soinsSeuls.has(s.id))
               .map((s) => ({ ...s, animalIds: s.animalIds.filter((a) => a !== id) }));
           }
+          if (collection === 'contacts') {
+            suite.operations = suite.operations.map((o) => (o.contactId === id ? { ...o, contactId: undefined } : o));
+          }
           if (collection === 'personnes') {
             suite.taches = suite.taches.map((t) => ({ ...t, assigneeIds: t.assigneeIds.filter((p) => p !== id) }));
             suite.animaux = suite.animaux.map((a) => ({ ...a, proprietaireIds: a.proprietaireIds.filter((p) => p !== id) }));

@@ -137,6 +137,10 @@ export interface Operation {
   partageAvec: string[];
   /** Partage inégal : montant de chaque personne. Prioritaire sur le partage à parts égales. */
   parts?: Record<string, number>;
+  /** Pro concerné (vétérinaire, maréchal…). */
+  contactId?: string;
+  /** Pas encore réglée : dépense (ou rentrée) prévue. Exclue des bilans et des comptes jusqu'au paiement. */
+  aPayer?: boolean;
   notes?: string;
 }
 
