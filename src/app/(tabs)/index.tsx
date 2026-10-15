@@ -8,11 +8,13 @@ import { aRacheter, quantiteTexte } from '../../lib/stock';
 import { placeDe } from '../../lib/fonctions';
 import { echeances } from '../../lib/sante';
 import { CarteEcheance } from '../../components/sante';
+import { useMajDisponible } from '../../lib/miseAJour';
 import { BoutonFlottant, Carte, Ecran, Petit, Titre, Vide, couleurs } from '../../components/ui';
 import { CarteRdv, CarteSuivi, LigneTache } from '../../components/elements';
 
 export default function Aujourdhui() {
   const { donnees, basculerRealisation } = useStore();
+  const majPrete = useMajDisponible();
   const [jour, setJour] = useState(jourISO());
   const estAujourdhui = jour === jourISO();
 
@@ -54,15 +56,23 @@ export default function Aujourdhui() {
             <Ionicons name="chevron-back" size={24} color={couleurs.doux} />
           </Pressable>
           <Pressable onPress={() => setJour(jourISO())} style={{ alignItems: 'center' }}>
-            <Text style={{ fontSize: 20, fontWeight: '700', color: couleurs.texte, textTransform: 'capitalize' }}>
-              {formatJour(jour)}
-            </Text>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: couleurs.texte, textTransform: 'capitalize' }}>{formatJour(jour)}</Text>
             {!estAujourdhui && <Petit>Revenir à aujourd’hui</Petit>}
           </Pressable>
           <Pressable onPress={() => setJour(ajouterJours(jour, 1))} hitSlop={10}>
             <Ionicons name="chevron-forward" size={24} color={couleurs.doux} />
           </Pressable>
         </View>
+
+        {majPrete && (
+          <Carte onPress={() => router.push('/mise-a-jour')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Ionicons name="arrow-down-circle" size={26} color={couleurs.accent} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: couleurs.texte }}>Nouvelle version disponible</Text>
+              <Petit>Touche ici pour mettre à jour l’app.</Petit>
+            </View>
+          </Carte>
+        )}
 
         {rdvsDuJour.length > 0 && <Titre>Rendez-vous</Titre>}
         {rdvsDuJour.map((r) => (
@@ -72,10 +82,14 @@ export default function Aujourdhui() {
         {estAujourdhui && aAcheter.length > 0 && (
           <>
             <Titre>À racheter</Titre>
-            <Carte onPress={() => router.push(placeDe(donnees.reglages, 'stock') === 'barre' ? '/stock' : '/vue/stock')} style={{ gap: 4, borderColor: couleurs.ambre, backgroundColor: '#FFF8EC' }}>
+            <Carte
+              onPress={() => router.push(placeDe(donnees.reglages, 'stock') === 'barre' ? '/stock' : '/vue/stock')}
+              style={{ gap: 4, borderColor: couleurs.ambre, backgroundColor: '#FFF8EC' }}
+            >
               {aAcheter.map((p) => (
                 <Text key={p.id} style={{ color: couleurs.texte, fontSize: 15 }}>
-                  {p.emoji} {p.nom} <Text style={{ color: couleurs.ambre, fontWeight: '600' }}>· reste {quantiteTexte(p.quantite, p.unite)}</Text>
+                  {p.emoji} {p.nom}{' '}
+                  <Text style={{ color: couleurs.ambre, fontWeight: '600' }}>· reste {quantiteTexte(p.quantite, p.unite)}</Text>
                 </Text>
               ))}
             </Carte>
@@ -98,9 +112,7 @@ export default function Aujourdhui() {
           />
         ))}
 
-        <Titre>
-          Tâches{taches.length > 0 ? ` (${restantes === 0 ? 'tout est fait 🎉' : `${restantes} à faire`})` : ''}
-        </Titre>
+        <Titre>Tâches{taches.length > 0 ? ` (${restantes === 0 ? 'tout est fait 🎉' : `${restantes} à faire`})` : ''}</Titre>
         {taches.length === 0 && <Vide>Aucune tâche prévue ce jour-là.</Vide>}
         {taches.map((t) => (
           <LigneTache

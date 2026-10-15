@@ -3,6 +3,7 @@ import { router, type Href } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useStore } from '../../lib/store';
 import { FONCTIONS } from '../../lib/fonctions';
+import { useMajDisponible } from '../../lib/miseAJour';
 import type { Donnees, FonctionId } from '../../lib/types';
 import { Carte, Ecran, Petit, Titre, couleurs } from '../../components/ui';
 
@@ -41,6 +42,7 @@ const SOUS: Record<FonctionId, (d: Donnees) => string> = {
 export default function Plus() {
   const { donnees } = useStore();
   const dansPlus = donnees.reglages.fonctions.filter((f) => f.place === 'plus');
+  const majPrete = useMajDisponible();
   return (
     <Ecran>
       {dansPlus.map(({ id }) => {
@@ -52,6 +54,12 @@ export default function Plus() {
       <Entree icone="qr-code-outline" titre="Partager l'app" sous="QR code pour la faire installer à quelqu'un" vers="/partage" />
       <Entree icone="options-outline" titre="Paramètres" sous="Barre du bas, catégories, stock, emojis" vers="/parametres" />
       <Entree icone="cloud-upload-outline" titre="Sauvegarde" sous="Exporter ou importer toutes tes données" vers="/sauvegarde" />
+      <Entree
+        icone="arrow-down-circle-outline"
+        titre="Mettre à jour l'app"
+        sous={majPrete ? '🎉 Nouvelle version disponible' : 'Installer la dernière version'}
+        vers="/mise-a-jour"
+      />
     </Ecran>
   );
 }
