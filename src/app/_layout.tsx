@@ -45,7 +45,6 @@ function Contenu() {
       <Stack.Screen name="parametres" options={{ title: 'Paramètres' }} />
       <Stack.Screen name="partage" options={{ title: 'Partager' }} />
       <Stack.Screen name="scanner" options={{ title: 'Scanner un QR code' }} />
-      <Stack.Screen name="mise-a-jour" options={{ title: 'Mettre à jour l’app' }} />
       <Stack.Screen name="import" options={{ title: 'Fiche partagée' }} />
       <Stack.Screen name="rappel" options={{ title: 'Envoyer un rappel', presentation: 'modal' }} />
       <Stack.Screen name="sante" options={{ title: 'Santé' }} />

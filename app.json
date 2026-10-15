@@ -17,10 +17,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "fr.lou.mesanimaux",
-      "permissions": [
-        "android.permission.REQUEST_INSTALL_PACKAGES"
-      ]
+      "package": "fr.lou.mesanimaux"
     },
     "web": {
       "favicon": "./assets/favicon.png",
