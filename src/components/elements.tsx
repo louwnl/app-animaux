@@ -30,9 +30,10 @@ function cible(tache: Tache, animaux: Animal[]): string | undefined {
  */
 function BoutonRappel({ tache, jour }: { tache: Tache; jour?: string }) {
   const { donnees } = useStore();
-  const joignables = confiees(tache, donnees.personnes).filter((p) => p.telephone);
-  if (joignables.length === 0) return null;
-  const seule = joignables.length === 1 ? joignables[0] : undefined;
+  const personnes = confiees(tache, donnees.personnes);
+  if (!personnes.some((p) => p.telephone)) return null;
+  // Avec plusieurs personnes, on passe toujours par l'écran de choix, même si certaines n'ont pas de numéro.
+  const seule = personnes.length === 1 ? personnes[0] : undefined;
   return (
     <Pressable
       onPress={() =>
@@ -183,11 +184,14 @@ export function CarteSuivi({
   const derniere = derniereFois(tache.id, realisations);
   const alerte = tache.recurrence.type === 'libre' ? tache.recurrence.alerteApresJours : undefined;
   const enRetard = !!alerte && (!derniere || ecartJours(derniere, jourISO()) >= alerte);
-  const sous = [cible(tache, animaux), confiee]
-    .filter(Boolean)
-    .join(' · ');
+  const sous = [cible(tache, animaux), confiee].filter(Boolean).join(' · ');
   return (
-    <Carte style={[{ flexDirection: 'row', alignItems: 'center', gap: 10 }, enRetard && { borderColor: couleurs.ambre, backgroundColor: '#FFF8EC' }]}>
+    <Carte
+      style={[
+        { flexDirection: 'row', alignItems: 'center', gap: 10 },
+        enRetard && { borderColor: couleurs.ambre, backgroundColor: '#FFF8EC' },
+      ]}
+    >
       <Pressable style={{ flex: 1, gap: 2 }} onPress={() => router.push(`/tache/edit?id=${tache.id}`)}>
         <Text style={{ fontSize: 16, color: couleurs.texte, fontWeight: '600' }}>
           {option(donnees.listes.categoriesTache, tache.categorie).emoji} {tache.titre}

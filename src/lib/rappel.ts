@@ -14,18 +14,15 @@ export function numeroInternational(tel: string): string {
 
 export function messageRappel(tache: Tache, animaux: Animal[], jour?: string): string {
   const quoi = [tache.titre, nomsAnimaux(tache.animalIds, animaux) || tache.lieu].filter(Boolean).join(' – ');
-  const quand =
-    tache.recurrence.type === 'libre' || !jour
-      ? ''
-      : jour === jourISO()
-        ? " aujourd'hui"
-        : ` ${formatJour(jour)}`;
+  const quand = tache.recurrence.type === 'libre' || !jour ? '' : jour === jourISO() ? " aujourd'hui" : ` ${formatJour(jour)}`;
   const heure = tache.heure && quand ? ` à ${tache.heure.replace(':', 'h')}` : '';
   return `Petit rappel : ${quoi}${quand}${heure} 🙂 Merci !`;
 }
 
 export function ouvrirSms(tel: string, texte: string) {
-  return Linking.openURL(`sms:${tel.replace(/\s/g, '')}?body=${encodeURIComponent(texte)}`);
+  return Linking.openURL(`sms:${tel.replace(/\s/g, '')}?body=${encodeURIComponent(texte)}`).catch(() =>
+    Alert.alert('SMS', "Impossible d'ouvrir les messages."),
+  );
 }
 
 export function ouvrirWhatsapp(tel: string, texte: string) {
@@ -41,7 +38,6 @@ export function proposerRappel(personne: Personne, tache: Tache, animaux: Animal
   const sms = () => ouvrirSms(personne.telephone!, texte);
   const whatsapp = () => ouvrirWhatsapp(personne.telephone!, texte);
   if (Platform.OS === 'web') {
-     
     if (window.confirm(`Envoyer par WhatsApp ? (Annuler = SMS)\n\n${texte}`)) whatsapp();
     else sms();
     return;

@@ -1,5 +1,5 @@
 import { Text, View } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useStore, useTache } from '../lib/store';
 import { confiees } from '../lib/taches';
 import { messageRappel, ouvrirSms, ouvrirWhatsapp } from '../lib/rappel';
@@ -10,7 +10,12 @@ export default function Rappel() {
   const { tacheId, jour } = useLocalSearchParams<{ tacheId: string; jour?: string }>();
   const tache = useTache(tacheId);
   const { donnees } = useStore();
-  if (!tache) return <Ecran><Vide>Tâche introuvable.</Vide></Ecran>;
+  if (!tache)
+    return (
+      <Ecran>
+        <Vide>Tâche introuvable.</Vide>
+      </Ecran>
+    );
   const texte = messageRappel(tache, donnees.animaux, jour || undefined);
   const personnes = confiees(tache, donnees.personnes);
 
@@ -34,7 +39,7 @@ export default function Rappel() {
               </View>
             </View>
           ) : (
-            <Petit>Pas de numéro : ajoute-le dans Personnes.</Petit>
+            <Bouton titre="Ajouter son numéro" variante="secondaire" onPress={() => router.push(`/personne/edit?id=${p.id}`)} />
           )}
         </Carte>
       ))}
