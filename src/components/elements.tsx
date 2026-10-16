@@ -1,4 +1,5 @@
-import { Platform, Pressable, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, PanResponder, Platform, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Animal, Contact, Personne, Realisation, RendezVous, Tache } from '../lib/types';
@@ -83,6 +84,7 @@ export function LigneTache({
   personnes = [],
   jour,
   onBasculer,
+  onReporter,
 }: {
   tache: Tache;
   jour?: string;
@@ -91,6 +93,8 @@ export function LigneTache({
   animaux: Animal[];
   personnes?: Personne[];
   onBasculer: () => void;
+  /** Glisser la ligne vers la droite reporte la tâche au lendemain. */
+  onReporter?: () => void;
 }) {
   const { donnees } = useStore();
   const confiee = libelleConfiee(tache, personnes);
@@ -103,7 +107,7 @@ export function LigneTache({
   ]
     .filter(Boolean)
     .join(' · ');
-  return (
+  const ligne = (
     <Carte style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       <Pressable onPress={onBasculer} hitSlop={10} accessibilityRole="checkbox" accessibilityState={{ checked: faite }}>
         <Ionicons name={faite ? 'checkmark-circle' : 'ellipse-outline'} size={30} color={faite ? couleurs.accent : couleurs.bord} />
@@ -122,6 +126,71 @@ export function LigneTache({
       </Pressable>
       {!faite && <BoutonRappel tache={tache} jour={jour} />}
     </Carte>
+  );
+  if (faite || !onReporter) return ligne;
+  return (
+    <Glissable onGlisse={onReporter} libelle={`Reporter ${tache.titre} à demain`}>
+      {ligne}
+    </Glissable>
+  );
+}
+
+const SEUIL_GLISSE = 90;
+
+/** Ligne que l'on glisse vers la droite ; au-delà du seuil, elle part et déclenche l'action. */
+function Glissable({ children, onGlisse, libelle }: { children: React.ReactNode; onGlisse: () => void; libelle: string }) {
+  const action = useRef(onGlisse);
+  useEffect(() => {
+    action.current = onGlisse;
+  }, [onGlisse]);
+  const [x] = useState(() => new Animated.Value(0));
+  // Les gestionnaires ne lisent action.current qu'à la fin du geste, jamais pendant le rendu.
+  // eslint-disable-next-line react-hooks/refs
+  const [geste] = useState(() =>
+    PanResponder.create({
+      // Seul un mouvement franchement horizontal vers la droite est pris, le défilement vertical reste libre.
+      onMoveShouldSetPanResponder: (_, g) => g.dx > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 2,
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderMove: (_, g) => x.setValue(Math.max(0, g.dx)),
+      onPanResponderRelease: (_, g) => {
+        if (g.dx > SEUIL_GLISSE) {
+          Animated.timing(x, { toValue: 500, duration: 160, useNativeDriver: Platform.OS !== 'web' }).start(() => {
+            action.current();
+            x.setValue(0);
+          });
+        } else {
+          Animated.spring(x, { toValue: 0, useNativeDriver: Platform.OS !== 'web' }).start();
+        }
+      },
+      onPanResponderTerminate: () => Animated.spring(x, { toValue: 0, useNativeDriver: Platform.OS !== 'web' }).start(),
+    }),
+  );
+  const opacite = x.interpolate({ inputRange: [0, SEUIL_GLISSE], outputRange: [0, 1], extrapolate: 'clamp' });
+  return (
+    <View accessibilityActions={[{ name: 'reporter', label: libelle }]} onAccessibilityAction={() => onGlisse()}>
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          borderRadius: 14,
+          backgroundColor: couleurs.ambre,
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingLeft: 18,
+          gap: 8,
+          opacity: opacite,
+        }}
+      >
+        <Ionicons name="arrow-forward-circle" size={24} color="#fff" />
+        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Demain</Text>
+      </Animated.View>
+      <Animated.View style={{ transform: [{ translateX: x }] }} {...geste.panHandlers}>
+        {children}
+      </Animated.View>
+    </View>
   );
 }
 
@@ -183,11 +252,14 @@ export function CarteSuivi({
   const derniere = derniereFois(tache.id, realisations);
   const alerte = tache.recurrence.type === 'libre' ? tache.recurrence.alerteApresJours : undefined;
   const enRetard = !!alerte && (!derniere || ecartJours(derniere, jourISO()) >= alerte);
-  const sous = [cible(tache, animaux), confiee]
-    .filter(Boolean)
-    .join(' · ');
+  const sous = [cible(tache, animaux), confiee].filter(Boolean).join(' · ');
   return (
-    <Carte style={[{ flexDirection: 'row', alignItems: 'center', gap: 10 }, enRetard && { borderColor: couleurs.ambre, backgroundColor: '#FFF8EC' }]}>
+    <Carte
+      style={[
+        { flexDirection: 'row', alignItems: 'center', gap: 10 },
+        enRetard && { borderColor: couleurs.ambre, backgroundColor: '#FFF8EC' },
+      ]}
+    >
       <Pressable style={{ flex: 1, gap: 2 }} onPress={() => router.push(`/tache/edit?id=${tache.id}`)}>
         <Text style={{ fontSize: 16, color: couleurs.texte, fontWeight: '600' }}>
           {option(donnees.listes.categoriesTache, tache.categorie).emoji} {tache.titre}
@@ -214,5 +286,33 @@ export function CarteSuivi({
         <Text style={{ color: faitCeJour ? '#fff' : couleurs.accent, fontWeight: '600' }}>{faitCeJour ? '✓ Fait' : 'Fait'}</Text>
       </Pressable>
     </Carte>
+  );
+}
+
+/** Petit bandeau en bas d'écran pour annuler la dernière action. */
+export function BandeauAnnuler({ texte, onAnnuler }: { texte: string; onAnnuler: () => void }) {
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        left: 16,
+        right: 92,
+        bottom: 24,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        borderRadius: 12,
+        backgroundColor: couleurs.texte,
+      }}
+    >
+      <Text style={{ flex: 1, color: '#fff' }} numberOfLines={2}>
+        {texte}
+      </Text>
+      <Pressable onPress={onAnnuler} hitSlop={10}>
+        <Text style={{ color: '#F5C26B', fontWeight: '700' }}>Annuler</Text>
+      </Pressable>
+    </View>
   );
 }
