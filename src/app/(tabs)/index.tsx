@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -10,10 +10,23 @@ import { echeances } from '../../lib/sante';
 import { CarteEcheance } from '../../components/sante';
 import { useMajDisponible } from '../../lib/miseAJour';
 import { BoutonFlottant, Carte, Ecran, Petit, Titre, Vide, couleurs } from '../../components/ui';
-import { CarteRdv, CarteSuivi, LigneTache } from '../../components/elements';
+import { BandeauAnnuler, CarteRdv, CarteSuivi, LigneTache } from '../../components/elements';
+import { reporterAuLendemain } from '../../lib/taches';
+import type { Tache } from '../../lib/types';
 
 export default function Aujourdhui() {
-  const { donnees, basculerRealisation } = useStore();
+  const { donnees, basculerRealisation, enregistrer } = useStore();
+  // Dernier report, que l'on peut annuler quelques secondes.
+  const [annulable, setAnnulable] = useState<Tache>();
+  useEffect(() => {
+    if (!annulable) return;
+    const minuteur = setTimeout(() => setAnnulable(undefined), 6000);
+    return () => clearTimeout(minuteur);
+  }, [annulable]);
+  const reporter = (t: Tache) => {
+    enregistrer('taches', reporterAuLendemain(t, jour));
+    setAnnulable(t);
+  };
   const majPrete = useMajDisponible();
   const [jour, setJour] = useState(jourISO());
   const estAujourdhui = jour === jourISO();
@@ -114,6 +127,7 @@ export default function Aujourdhui() {
 
         <Titre>Tâches{taches.length > 0 ? ` (${restantes === 0 ? 'tout est fait 🎉' : `${restantes} à faire`})` : ''}</Titre>
         {taches.length === 0 && <Vide>Aucune tâche prévue ce jour-là.</Vide>}
+        {restantes > 0 && <Petit>Pas eu le temps ? Glisse une tâche vers la droite pour la reporter à demain.</Petit>}
         {taches.map((t) => (
           <LigneTache
             key={t.id}
@@ -124,6 +138,7 @@ export default function Aujourdhui() {
             animaux={donnees.animaux}
             personnes={donnees.personnes}
             onBasculer={() => basculer(t.id, t.categorie)}
+            onReporter={() => reporter(t)}
           />
         ))}
 
@@ -134,6 +149,15 @@ export default function Aujourdhui() {
         ))}
       </Ecran>
       <BoutonFlottant onPress={() => router.push(`/tache/edit?jour=${jour}`)} />
+      {annulable && (
+        <BandeauAnnuler
+          texte={`« ${annulable.titre} » reportée à demain`}
+          onAnnuler={() => {
+            enregistrer('taches', annulable);
+            setAnnulable(undefined);
+          }}
+        />
+      )}
     </View>
   );
 }

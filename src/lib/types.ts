@@ -58,6 +58,8 @@ export interface Tache {
   rappel: boolean;
   /** Qui s'en occupe : ids de Personne, et MOI. Vide = moi. */
   assigneeIds: string[];
+  /** Occurrences reportées à un autre jour (« pas eu le temps, demain »). */
+  reports?: { de: string; vers: string }[];
 }
 
 export type TypeSeance = string;

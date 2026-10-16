@@ -49,7 +49,12 @@ export function libelleRecurrence(r: Recurrence): string {
     case 'quotidienne':
       return 'Tous les jours';
     case 'hebdo':
-      return r.jours.length === 7 ? 'Tous les jours' : [...r.jours].sort().map((j) => JOURS_COURTS[j]).join(', ');
+      return r.jours.length === 7
+        ? 'Tous les jours'
+        : [...r.jours]
+            .sort()
+            .map((j) => JOURS_COURTS[j])
+            .join(', ');
     case 'intervalle':
       return `Tous les ${r.tousLes} jours`;
     case 'libre':
@@ -65,15 +70,24 @@ export function tacheActive(t: Tache, animaux: Animal[]): boolean {
 
 /** Tâche finie : ponctuelle déjà passée, ou arrivée à sa date de fin. */
 export function tacheTerminee(t: Tache, aujourdhui: string): boolean {
+  if (t.reports?.some((r) => r.vers >= aujourdhui)) return false;
   if (t.dateFin && t.dateFin < aujourdhui) return true;
   return t.recurrence.type === 'unique' && t.dateDebut < aujourdhui;
 }
 
 /** La tâche tombe-t-elle ce jour-là ? Les tâches d'animaux partis s'arrêtent. */
 export function tacheLeJour(t: Tache, jour: string, animaux: Animal[]): boolean {
+  if (!tacheActive(t, animaux)) return false;
+  // Une occurrence reportée quitte son jour d'origine et arrive le jour choisi.
+  if (t.reports?.some((r) => r.vers === jour)) return true;
+  if (t.reports?.some((r) => r.de === jour)) return false;
+  return tachePrevue(t, jour);
+}
+
+/** Le jour fait-il partie du rythme de la tâche (sans tenir compte des reports) ? */
+export function tachePrevue(t: Tache, jour: string): boolean {
   if (jour < t.dateDebut) return false;
   if (t.dateFin && jour > t.dateFin) return false;
-  if (!tacheActive(t, animaux)) return false;
   const r = t.recurrence;
   switch (r.type) {
     case 'unique':
